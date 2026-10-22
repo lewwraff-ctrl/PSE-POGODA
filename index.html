@@ -171,8 +171,7 @@
 
     <header>
         <div>
-            <h1>⚡ PSE + Pogoda (Sieć Cieplna ZG)</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB, Bilans KSE oraz parametry pogody ZG na sieć | Klawisz F11 = Pełny Ekran</span>
+            <h1>⚡ PSE + Pogoda</h1>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div style="text-align: right;">
@@ -188,7 +187,7 @@
         <!-- CEN -->
         <div class="card" id="cen-card" style="border: 2px solid var(--border-color);">
             <h2>
-                <span>Ceny na Rynku Bilansującym (RB)</span>
+                <span>Ceny na Rynku Bilansującym PSE</span>
                 <button class="secondary" onclick="toggleCenFullscreen()" style="padding: 6px 12px; font-size: 0.8rem;">📺 Powiększ ten panel</button>
             </h2>
             <div><span id="cen-period" class="period">Okres: --</span></div>
@@ -287,7 +286,7 @@
 
         <!-- POGODA -->
         <div class="card">
-            <h2>Pogoda ZG (Sieć Cieplna)</h2>
+            <h2>Pogoda Zielona Góra</h2>
             <div class="wx-top">
                 <div id="weather-temp" class="value-huge" style="font-size: 2.2rem;">--°C</div>
                 <div id="weather-desc" style="font-size: 0.75rem; color: var(--text-muted);">Pobieranie...</div>
@@ -315,7 +314,7 @@
     <!-- POGODA WYKRES DOLNY -->
     <div class="charts-grid">
         <div class="card">
-            <h2>Temperatura godzinowa i opady - Zielona Góra</h2>
+            <h2>Wykres pogody Zielona Góra</h2>
             <div class="chart-container"><canvas id="tempChart"></canvas></div>
         </div>
     </div>
