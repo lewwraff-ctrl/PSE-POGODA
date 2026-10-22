@@ -155,34 +155,43 @@
         #fs-weather-strip { display: none; }
 
         #cen-card:fullscreen, #cen-card:-webkit-full-screen { 
-            background: var(--card-bg); padding: 30px; display: flex; flex-direction: column; 
+            background: var(--card-bg); padding: 25px 30px; display: flex; flex-direction: column; 
             justify-content: flex-start; width: 100vw; height: 100vh; overflow: hidden;
         }
-        #cen-card:fullscreen h2, #cen-card:-webkit-full-screen h2 { font-size: 2rem !important; margin-bottom: 1vh; }
-        #cen-card:fullscreen #cen-period, #cen-card:-webkit-full-screen #cen-period { font-size: 2.5vh !important; padding: 0.6vh 1.2vh; margin: 0 auto; display: block; width: max-content; }
-        #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: 13vh !important; text-align: center; margin: 1vh 0; line-height: 1; }
-        #cen-card:fullscreen .sub-info, #cen-card:-webkit-full-screen .sub-info { text-align: center; font-size: 2vh; }
+        #cen-card:fullscreen h2, #cen-card:-webkit-full-screen h2 { font-size: 1.8rem !important; margin-bottom: 0.5vh; }
+        #cen-card:fullscreen #cen-period, #cen-card:-webkit-full-screen #cen-period { font-size: 2.2vh !important; padding: 0.5vh 1vh; margin: 0 auto; display: block; width: max-content; }
+        #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: 11vh !important; text-align: center; margin: 0.5vh 0; line-height: 1; }
+        #cen-card:fullscreen .sub-info, #cen-card:-webkit-full-screen .sub-info { text-align: center; font-size: 1.8vh; }
         
         /* Styl małego, dyskretnego paska pogodowego w pełnym ekranie */
         #cen-card:fullscreen #fs-weather-strip, #cen-card:-webkit-full-screen #fs-weather-strip {
             display: flex !important;
             justify-content: center;
             align-items: center;
-            gap: 30px;
+            gap: 25px;
             background: rgba(255,255,255,0.03);
             border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 8px;
-            padding: 0.8vh 1.5vw;
-            margin: 1vh auto;
+            border-radius: 6px;
+            padding: 0.6vh 1.2vw;
+            margin: 0.5vh auto;
             width: max-content;
+            font-size: 1.6vh;
+        }
+
+        /* Widoczny status-bar w trybie pełnoekranowym */
+        #cen-card:fullscreen .status-bar, #cen-card:-webkit-full-screen .status-bar {
+            display: flex !important;
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-top: 8px;
             font-size: 1.8vh;
         }
 
         #cen-card:fullscreen .rb-chart-box, #cen-card:-webkit-full-screen .rb-chart-box { 
-            flex-grow: 1; height: auto !important; min-height: 0; width: 100%; margin-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;
+            flex-grow: 1; height: auto !important; min-height: 140px; width: 100%; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;
         }
-        #cen-card:fullscreen .weather-grid, #cen-card:fullscreen .threshold-info, #cen-card:fullscreen .status-bar, 
-        #cen-card:-webkit-full-screen .weather-grid, #cen-card:-webkit-full-screen .threshold-info, #cen-card:-webkit-full-screen .status-bar { display: none !important; }
+        #cen-card:fullscreen .weather-grid, #cen-card:fullscreen .threshold-info, 
+        #cen-card:-webkit-full-screen .weather-grid, #cen-card:-webkit-full-screen .threshold-info { display: none !important; }
 
         @media (max-width: 380px) {
             body { padding: 7px; }
@@ -193,7 +202,6 @@
 <body>
 
     <header>
-        <div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div style="text-align: right;">
                 <div id="date-box" class="date-box">--.--.----</div>
@@ -208,7 +216,7 @@
         <!-- CEN -->
         <div class="card" id="cen-card" style="border: 2px solid var(--border-color);">
             <h2>
-                <span>Ceny na Rynku Bilansującym (RB)</span>
+                <span>Ceny na Rynku Bilansującym PSE</span>
                 <button class="secondary" onclick="toggleCenFullscreen()" style="padding: 6px 12px; font-size: 0.8rem;">📺 Powiększ ten panel</button>
             </h2>
             <div><span id="cen-period" class="period">Okres: --</span></div>
@@ -285,7 +293,7 @@
     <!-- POGODA WYKRES DOLNY -->
     <div class="charts-grid">
         <div class="card">
-            <h2>Temperatura godzinowa i opady - Zielona Góra - Wykres</h2>
+            <h2>Wykres Pogody Zielona Góra</h2>
             <div class="chart-container"><canvas id="tempChart"></canvas></div>
         </div>
     </div>
