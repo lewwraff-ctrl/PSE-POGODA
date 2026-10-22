@@ -53,7 +53,6 @@
         }
         .card h2 { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        /* POWIĘKSZONA, BARDZO CZYTELNA CENA DLA NASTAWNI */
         .value-huge {
             font-family: 'JetBrains Mono', monospace;
             font-size: 3.5rem;
@@ -79,7 +78,7 @@
         }
         .weather-item { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; }
         .weather-item span { display: block; font-size: 0.8rem; color: var(--text-muted); }
-        .weather-item strong { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; }
+        .weather-item strong { font-family: 'JetBrains Mono', monospace; font-size: 1rem; }
         
         .charts-grid {
             display: grid;
@@ -124,7 +123,7 @@
     <header>
         <div>
             <h1>⚡ Panel Nastawni (EC) - Live Dashboard</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Oficjalne API PSE & Pogoda w Płotach</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Oficjalne API PSE & Pogoda godzinowa (Płoty)</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div id="clock" class="clock-box">--:--:--</div>
@@ -133,6 +132,7 @@
     </header>
 
     <div class="grid">
+        <!-- CENA ENERGII -->
         <div class="card" id="rce-card" style="border: 2px solid var(--accent-blue);">
             <h2>Aktualna cena energii (RCE - 15 min)</h2>
             <div id="rce-price" class="value-huge" style="color: var(--accent-blue);">Pobieranie...</div>
@@ -143,6 +143,7 @@
             </div>
         </div>
 
+        <!-- ZAPOTRZEBOWANIE KSE -->
         <div class="card">
             <h2>Aktualne zapotrzebowanie KSE</h2>
             <div id="kse-load" class="value-huge" style="font-size: 2.75rem; color: var(--accent-blue);">--</div>
@@ -153,29 +154,31 @@
             </div>
         </div>
 
+        <!-- POGODA W PŁOTACH (SZCZEGÓŁOWA) -->
         <div class="card">
-            <h2>Pogoda w Płotach</h2>
+            <h2>Pogoda w Płotach (Live Godzinowa)</h2>
             <div style="display: flex; align-items: baseline; gap: 10px;">
                 <div id="weather-temp" class="value-huge" style="font-size: 2.75rem; color: var(--text-main);">--°C</div>
-                <div id="weather-desc" style="font-size: 1.1rem; color: var(--text-muted);">Pobieranie...</div>
+                <div id="weather-desc" style="font-size: 1.0rem; color: var(--text-muted);">Pobieranie...</div>
             </div>
             <div class="weather-grid">
                 <div class="weather-item">
-                    <span>Wiatr</span>
-                    <strong id="weather-wind">-- km/h</strong>
+                    <span>Max wiatr (poryw)</span>
+                    <strong id="weather-max-wind" style="color: var(--accent-orange);">-- km/h</strong>
                 </div>
                 <div class="weather-item">
-                    <span>Ciśnienie</span>
-                    <strong id="weather-press">-- hPa</strong>
+                    <span>Opady / Stan</span>
+                    <strong id="weather-precip">Brak opadów</strong>
                 </div>
             </div>
             <div class="status-bar">
                 <span><span class="pulse"></span>Open-Meteo API</span>
-                <span>Auto-odświeżanie</span>
+                <span id="weather-pressure-info">Ciśnienie: -- hPa</span>
             </div>
         </div>
     </div>
 
+    <!-- WYKRESY -->
     <div class="charts-grid">
         <div class="card">
             <h2>Profil cenowy RCE (Bieżąca doba - interwały 15 min)</h2>
@@ -184,7 +187,7 @@
             </div>
         </div>
         <div class="card">
-            <h2>Prognoza temperatury w Płotach (Godzinowa 24h)</h2>
+            <h2>Godzinowa prognoza temperatury i porywów wiatru (24h)</h2>
             <div class="chart-container">
                 <canvas id="tempChart"></canvas>
             </div>
@@ -294,27 +297,45 @@
 
         async function fetchWeather() {
             try {
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=53.73&longitude=15.96&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m`;
+                // Pobieramy dane godzinowe uwzględniające opady, wiatr i temperaturę
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=53.73&longitude=15.96&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,precipitation,wind_speed_10m,weather_code`;
                 const response = await fetch(url);
                 const data = await response.json();
                 
                 if (data && data.current) {
                     const curr = data.current;
                     document.getElementById('weather-temp').innerText = curr.temperature_2m + '°C';
-                    document.getElementById('weather-wind').innerText = curr.wind_speed_10m + ' km/h';
-                    document.getElementById('weather-press').innerText = curr.surface_pressure + ' hPa';
+                    document.getElementById('weather-pressure-info').innerText = `Ciśnienie: ${curr.surface_pressure} hPa`;
                     
                     let desc = "Stabilnie";
-                    if(curr.weather_code > 0 && curr.weather_code < 4) desc = "Lekkie zachmurzenie";
-                    if(curr.weather_code >= 50 && curr.weather_code < 70) desc = "Opady deszczu";
+                    if(curr.weather_code >= 50 && curr.weather_code < 65) desc = "Opady deszczu";
+                    else if(curr.weather_code >= 65 && curr.weather_code < 70) desc = "Ulewny deszcz";
+                    else if(curr.weather_code >= 70 && curr.weather_code < 80) desc = "Opady śniegu";
+                    else if(curr.weather_code >= 80) desc = "Przelotne opady / Grad";
+                    else if(curr.weather_code > 0 && curr.weather_code < 4) desc = "Lekkie zachmurzenie";
+                    
                     document.getElementById('weather-desc').innerText = desc;
+                    document.getElementById('weather-precip').innerText = curr.precipitation > 0 ? `${curr.precipitation} mm/h` : "Brak opadów";
                 }
 
                 if (data && data.hourly) {
                     const hourly = data.hourly;
                     const times = hourly.time.slice(0, 24).map(t => t.substring(11, 16));
                     const temps = hourly.temperature_2m.slice(0, 24);
-                    updateTempChart(times, temps);
+                    const winds = hourly.wind_speed_10m.slice(0, 24);
+
+                    // Szukamy największego wiatru w najbliższych 24h
+                    let maxWind = 0;
+                    let maxWindTime = "";
+                    for(let i=0; i<24; i++) {
+                        if(winds[i] > maxWind) {
+                            maxWind = winds[i];
+                            maxWindTime = times[i];
+                        }
+                    }
+                    document.getElementById('weather-max-wind').innerText = `${maxWind} km/h (o ${maxWindTime})`;
+
+                    updateTempChart(times, temps, winds);
                 }
             } catch (err) {
                 console.error("Błąd pogody:", err);
@@ -366,45 +387,78 @@
             }
         }
 
-        function updateTempChart(labels, data) {
+        // Podwójny wykres godzinowy (Temperatura + Wiatr)
+        function updateTempChart(labels, temps, winds) {
             const ctx = document.getElementById('tempChart').getContext('2d');
             if (tempChartInstance) {
                 tempChartInstance.data.labels = labels;
-                tempChartInstance.data.datasets[0].data = data;
+                tempChartInstance.data.datasets[0].data = temps;
+                tempChartInstance.data.datasets[1].data = winds;
                 tempChartInstance.update();
             } else {
                 tempChartInstance = new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: labels,
-                        datasets: [{
-                            label: 'Temperatura',
-                            data: data,
-                            borderColor: '#f59e0b',
-                            backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                            borderWidth: 2.5,
-                            fill: true,
-                            tension: 0.3,
-                            pointRadius: 2,
-                            pointHoverRadius: 6
-                        }]
+                        datasets: [
+                            {
+                                label: 'Temperatura (°C)',
+                                data: temps,
+                                borderColor: '#f59e0b',
+                                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                borderWidth: 2.5,
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 2,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Wiatr (km/h)',
+                                data: winds,
+                                borderColor: '#10b981',
+                                borderDash: [4, 4],
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.3,
+                                pointRadius: 1,
+                                yAxisID: 'y1'
+                            }
+                        ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { display: false },
+                            legend: { labels: { color: '#f8fafc' } },
                             tooltip: {
                                 callbacks: {
                                     label: function(context) {
-                                        return ` Temp: ${context.parsed.y.toFixed(1)} °C`;
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        if (context.parsed.y !== null) {
+                                            label += context.parsed.y.toFixed(1) + (context.datasetIndex === 0 ? ' °C' : ' km/h');
+                                        }
+                                        return label;
                                     }
                                 }
                             }
                         },
                         scales: {
                             x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', maxTicksLimit: 8 } },
-                            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', callback: function(value) { return value + '°C'; } } }
+                            y: { 
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                grid: { color: 'rgba(255,255,255,0.05)' }, 
+                                ticks: { color: '#f59e0b' } 
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                grid: { drawOnChartArea: false },
+                                ticks: { color: '#10b981' }
+                            }
                         }
                     }
                 });
