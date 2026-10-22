@@ -258,8 +258,12 @@
                 </table>
             </div>
             <div class="status-bar">
-                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">API PSE Live</span></span>
+                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">API PSE</span></span>
                 <span id="kse-update-time">--</span>
+            </div>
+            <div style="margin-top:8px;color:var(--text-muted);font-size:0.72rem;line-height:1.45;">
+                Zapotrzebowanie, generacja i saldo: raporty PSE (mogą być opóźnione).
+                Częstotliwość: Energy-Charts, pomiar sieci synchronicznej Europy kontynentalnej.
             </div>
         </div>
 
@@ -644,7 +648,7 @@
             $('kse-demand').innerText = '--';
             $('kse-gen').innerText = '--';
             $('kse-saldo').innerText = '--';
-            $('kse-freq').innerText = 'brak danych';
+            // Częstotliwość pobierana jest osobno; błąd raportów PSE nie powinien jej kasować.
             $('kse-update-time').innerText = message;
         }
 
@@ -695,12 +699,86 @@
             $('kse-demand').innerText = demand !== null ? Math.round(demand).toLocaleString('pl-PL') + ' MW' : '--';
             $('kse-gen').innerText = generation !== null ? Math.round(generation).toLocaleString('pl-PL') + ' MW' : '--';
             $('kse-saldo').innerText = saldo !== null ? (saldo > 0 ? '+' : '') + Math.round(saldo).toLocaleString('pl-PL') + ' MW' : '--';
-            $('kse-freq').innerText = 'brak danych';
-            $('kse-freq').title = 'Częstotliwość nie jest publikowana w raportach kse-load / his-wlk-cal.';
             $('kse-pulse').classList.remove('err');
             $('kse-status').classList.remove('err-text');
             $('kse-status').innerText = errors.length ? 'Częściowe dane raportowe PSE · ' + errors.join(' | ') : 'Raporty PSE · dane nie są chwilową mapą KSE';
             $('kse-update-time').innerText = 'Ostatni rekord: ' + newestDate.toLocaleString('pl-PL', { timeZone: TZ }) + ' · wiek ' + Math.max(0, Math.round(ageMinutes)) + ' min';
+        }
+
+        // ---------- Częstotliwość sieci: Energy-Charts ----------
+        // Pomiar z Freiburga (DE-Freiburg) dotyczy wspólnej sieci synchronicznej Europy kontynentalnej.
+        // Nie jest to pomiar wykonany fizycznie w Polsce.
+        async function refreshFrequency() {
+            const endSec = Math.floor(Date.now() / 1000);
+            const startSec = endSec - 120;
+            const legacyUrl = `https://api.energy-charts.info/frequency?region=DE-Freiburg&start=${startSec}&end=${endSec}`;
+
+            try {
+                let response = await fetch(legacyUrl, { cache: 'no-store' });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                let payload = await response.json();
+
+                let hz = null;
+                let sampleSec = null;
+
+                // Format klasycznego endpointu Energy-Charts: unix_seconds[] i data[].
+                if (Array.isArray(payload.data)) {
+                    for (let i = payload.data.length - 1; i >= 0; i--) {
+                        const candidate = Number(payload.data[i]);
+                        if (Number.isFinite(candidate)) {
+                            hz = candidate;
+                            sampleSec = Array.isArray(payload.unix_seconds)
+                                ? Number(payload.unix_seconds[i]) : null;
+                            break;
+                        }
+                    }
+                }
+
+                // Zapasowo obsłuż format v2, gdyby stary endpoint został wycofany.
+                if (hz === null) {
+                    const startIso = new Date(startSec * 1000).toISOString();
+                    const endIso = new Date(endSec * 1000).toISOString();
+                    response = await fetch(
+                        `https://api.energy-charts.info/v2/frequency?region=DE-Freiburg&start=${encodeURIComponent(startIso)}&end=${encodeURIComponent(endIso)}`,
+                        { cache: 'no-store' }
+                    );
+                    if (!response.ok) throw new Error('HTTP ' + response.status + ' (v2)');
+                    payload = await response.json();
+
+                    const series = Array.isArray(payload.series) ? payload.series : [];
+                    const frequencySeries = series.find(s =>
+                        /frequency|frequenz|częstotliwość/i.test(String(s.id || '') + ' ' + String(s.name || ''))
+                    );
+                    const seriesKey = frequencySeries?.id;
+                    const points = Array.isArray(payload.data) ? payload.data : [];
+                    for (let i = points.length - 1; i >= 0; i--) {
+                        const point = points[i];
+                        const vals = point?.values || {};
+                        const candidate = Number(seriesKey ? vals[seriesKey] : Object.values(vals)[0]);
+                        if (Number.isFinite(candidate)) {
+                            hz = candidate;
+                            sampleSec = point.timestamp ? Math.floor(Date.parse(point.timestamp) / 1000) : null;
+                            break;
+                        }
+                    }
+                }
+
+                if (hz === null) throw new Error('API nie zwróciło wartości częstotliwości');
+                if (sampleSec !== null && (!Number.isFinite(sampleSec) || endSec - sampleSec > 180 || sampleSec - endSec > 30)) {
+                    throw new Error('pomiar częstotliwości jest nieaktualny');
+                }
+
+                $('kse-freq').innerText = hz.toLocaleString('pl-PL', {
+                    minimumFractionDigits: 3, maximumFractionDigits: 3
+                }) + ' Hz';
+                $('kse-freq').title = sampleSec
+                    ? 'Energy-Charts · pomiar z ' + new Date(sampleSec * 1000).toLocaleTimeString('pl-PL', { timeZone: TZ })
+                    : 'Energy-Charts · częstotliwość wspólnej sieci synchronicznej Europy kontynentalnej';
+            } catch (err) {
+                console.warn('Częstotliwość Energy-Charts:', err);
+                $('kse-freq').innerText = '--';
+                $('kse-freq').title = 'Nie udało się pobrać aktualnej częstotliwości z Energy-Charts: ' + explain(err);
+            }
         }
 
         async function refreshKse() {
@@ -803,11 +881,12 @@
             } catch (err) { console.error('Open-Meteo:', err); }
         }
 
-        function refreshDashboard() { refreshRb(); refreshKse(); refreshWeather(); }
+        function refreshDashboard() { refreshRb(); refreshKse(); refreshFrequency(); refreshWeather(); }
 
         refreshDashboard();
         setInterval(refreshRb, PSE_REFRESH_MS);
         setInterval(refreshKse, 60 * 1000);
+        setInterval(refreshFrequency, 15 * 1000);
         setInterval(refreshWeather, 10 * 60 * 1000);
     </script>
 </body>
