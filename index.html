@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Nastawni - PSE Standard 1:1 Live</title>
+    <title>Panel Nastawni - PSE Standard Live</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -40,7 +40,7 @@
         .clock-box { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 700; color: var(--accent-blue); }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 20px;
             margin-bottom: 24px;
         }
@@ -69,7 +69,7 @@
         }
         .flash-alert { animation: flashRed 1s ease-in-out 3; border: 2px solid var(--accent-red); }
 
-        /* Tabela 1:1 identyczna jak w panelu PSE */
+        /* Tabela w stylu PSE */
         .pse-table {
             width: 100%;
             margin-top: 8px;
@@ -151,7 +151,7 @@
     <header>
         <div>
             <h1>⚡ Panel Nastawni (EC) - Standard PSE Live</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">CEN, Zapotrzebowanie i Generacja (Układ 1:1 PSE) + Pogoda GPS</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">CEN, Bilans i Generacja, Pogoda GPS</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div id="clock" class="clock-box">--:--:--</div>
@@ -183,9 +183,9 @@
             </div>
         </div>
 
-        <!-- ZAPOTRZEBOWANIE I GENERACJA W JEDNEJ TABELI 1:1 JAK NA STRONIE PSE -->
+        <!-- BILANS I GENERACJA W KSE -->
         <div class="card" style="border: 2px solid var(--accent-blue);">
-            <h2>Zapotrzebowanie i Generacja KSE</h2>
+            <h2>Bilans i Generacja w KSE</h2>
             
             <table class="pse-table">
                 <tr>
