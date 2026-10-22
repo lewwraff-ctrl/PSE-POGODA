@@ -118,7 +118,7 @@
     <header>
         <div>
             <h1>⚡ Panel Nastawni (EC) - PSE Live</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB (co 30 s) i dane KSE (co 15 s) z PSE + pogoda Zielona Góra</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB (co 30 s) i dane KSE (co 15 s) z PSE + pogoda IMGW-PIB (Zielona Góra)</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div id="clock" class="clock-box">--:--:--</div>
@@ -168,7 +168,7 @@
             </div>
         </div>
 
-        <!-- POGODA (kompaktowa) -->
+        <!-- POGODA (kompaktowa) - tylko IMGW-PIB -->
         <div class="card">
             <h2>Pogoda (Zielona Góra)</h2>
             <div class="wx-top">
@@ -179,19 +179,20 @@
             <div class="metrics-grid">
                 <div class="weather-item"><span>Ciśnienie [hPa]</span><strong id="wx-pressure">--</strong></div>
                 <div class="weather-item"><span>Wilgotność</span><strong id="wx-humidity">--</strong></div>
-                <div class="weather-item"><span>Punkt rosy</span><strong id="wx-dew">--</strong></div>
-                <div class="weather-item"><span>Wiatr (poryw)</span><strong id="wx-wind" style="color: var(--accent-orange);">--</strong></div>
-                <div class="weather-item"><span>Opady</span><strong id="weather-precip">--</strong></div>
+                <div class="weather-item"><span>Punkt rosy*</span><strong id="wx-dew">--</strong></div>
+                <div class="weather-item"><span>Wiatr</span><strong id="wx-wind" style="color: var(--accent-orange);">--</strong></div>
+                <div class="weather-item"><span>Opady (suma)</span><strong id="weather-precip">--</strong></div>
                 <div class="weather-item"><span>Ciśn. dziś min–max</span><strong id="wx-pressure-range">--</strong></div>
             </div>
 
-            <div class="hourly-title">Najbliższe godziny: temp. · opad · wiatr (poryw) km/h</div>
-            <div id="hourly" class="hourly"><span class="sub-info">Pobieranie prognozy...</span></div>
+            <div class="hourly-title">Ostatnie pomiary godzinowe: temp. · opad · wiatr km/h</div>
+            <div id="hourly" class="hourly"><span class="sub-info">Pobieranie pomiarów...</span></div>
 
             <div class="status-bar">
                 <span id="imgw-status">IMGW-PIB: --</span>
-                <span id="om-status">Open-Meteo: --</span>
+                <span id="imgw-time">--</span>
             </div>
+            <div class="sub-info" style="font-size:0.68rem; margin-top:6px;">Źródłem pochodzenia danych jest Instytut Meteorologii i Gospodarki Wodnej – Państwowy Instytut Badawczy. *Dane IMGW-PIB zostały przetworzone (punkt rosy wyliczony ze wzoru Magnusa).</div>
         </div>
     </div>
 
@@ -201,7 +202,7 @@
             <div class="chart-container"><canvas id="rbChart"></canvas></div>
         </div>
         <div class="card">
-            <h2>Temperatura godzinowa i opady - Zielona Góra</h2>
+            <h2>Temperatura i opady - pomiary IMGW-PIB, Zielona Góra (dziś)</h2>
             <div class="chart-container"><canvas id="tempChart"></canvas></div>
         </div>
     </div>
@@ -210,7 +211,6 @@
         const PSE_API = 'https://api.raporty.pse.pl/api/';
         const IMGW_URL = 'https://danepubliczne.imgw.pl/api/data/synop/id/12400'; // stacja synoptyczna Zielona Góra
         const TZ = 'Europe/Warsaw';
-        const LAT = 51.9356, LON = 15.5065;
         const PSE_REFRESH_MS = 30 * 1000;
         // Znak salda wymiany w his-wlk-cal: true = wartość dodatnia oznacza IMPORT. Jeśli etykieta będzie odwrotna niż na pse.pl, zmień na false.
         const SWM_POSITIVE_IS_IMPORT = true;
@@ -373,6 +373,8 @@
         // Główne źródło: ten sam endpoint, z którego korzysta widget "Mapa KSE" na pse.pl (nieudokumentowany).
         // Zapasowe: oficjalne API raportów (his-wlk-cal, dane 15-min, tylko część pozycji).
         const KSE_SERVICE = 'https://www.pse.pl/transmissionMapService';
+        // Adres własnego pośrednika (Cloudflare Worker z pliku pse-proxy-worker.js). Puste = próba bezpośrednio z pse.pl (zwykle blokuje CORS).
+        const KSE_PROXY = '';
 
         function numPl(v) {
             if (v === null || v === undefined || v === '') return null;
@@ -390,7 +392,7 @@
         }
 
         async function loadKseLive() {
-            const j = await getJson(KSE_SERVICE);
+            const j = await getJson(KSE_PROXY || KSE_SERVICE);
             console.log('transmissionMapService:', j);
             const s = j && j.data && j.data.podsumowanie;
             if (!s) throw new Error('nieoczekiwany format odpowiedzi');
@@ -419,10 +421,19 @@
                     .sort((a, b) => String(a.dtime ?? a.udtczas).localeCompare(String(b.dtime ?? b.udtczas)));
                 if (rows.length) {
                     const r = rows[rows.length - 1];
+                    let demand = num(r.demand ?? r.zapotrzebowanie);
+                    let period = periodLabel(r.dtime ?? r.udtczas);
+                    try { // kse-load bywa świeższe niż his-wlk-cal
+                        const kl = (await pseFetch('kse-load', date))
+                            .filter(x => num(x.load_actual) !== null)
+                            .sort((a, b) => String(a.dtime).localeCompare(String(b.dtime)));
+                        const k = kl[kl.length - 1];
+                        if (k && String(k.dtime) >= String(r.dtime ?? r.udtczas)) { demand = num(k.load_actual); period = periodLabel(k.dtime); }
+                    } catch (e) { console.warn('kse-load:', e); }
                     const parts = [num(r.swm_p ?? r.swm_r), num(r.swm_np ?? r.swm_nr)].filter(v => v !== null);
                     return {
-                        src: 'api', period: periodLabel(r.dtime ?? r.udtczas),
-                        demand: num(r.demand ?? r.zapotrzebowanie), gen: null, thermal: null, hydro: null,
+                        src: 'api', period,
+                        demand, gen: null, thermal: null, hydro: null,
                         windOn: num(r.wi), windOff: null, windTotalOnly: true, pv: num(r.pv), other: null,
                         saldo: parts.length ? parts.reduce((a, b) => a + b, 0) : null, freq: null,
                         pub: r.publication_ts
@@ -446,7 +457,9 @@
         function renderKse(d) {
             const mw = v => v === null ? '--' : Math.round(v).toLocaleString('pl-PL');
             $('kse-demand').innerText = mw(d.demand);
-            $('kse-gen').innerText = mw(d.gen);
+            if (d.gen !== null) $('kse-gen').innerText = mw(d.gen);
+            else if (d.demand !== null && d.saldo !== null) $('kse-gen').innerText = '≈ ' + mw(d.demand - signedImport(d.saldo, d.demand, null)); // szacunek: zapotrzebowanie - import (pomija pompowanie)
+            else $('kse-gen').innerText = '--';
             $('kse-thermal').innerText = mw(d.thermal);
             $('kse-hydro').innerText = mw(d.hydro);
             $('kse-wind-on-label').innerText = d.windTotalOnly ? 'el. wiatrowe (łącznie)' : 'el. wiatrowe lądowe';
@@ -469,7 +482,7 @@
             $('kse-status').classList.remove('err-text');
             $('kse-status').innerText = d.src === 'live'
                 ? 'Portal PSE Live (Mapa KSE)'
-                : `Źródło zapasowe: API raportów, okres ${d.period} (brak pozycji niedostępnych w API)`;
+                : `Źródło zapasowe: API raportów, okres ${d.period}. Generacja ≈ zapotrzebowanie − import. Pełne dane live: ustaw KSE_PROXY.`;
             $('kse-update-time').innerText = 'sprawdzono ' + nowStr();
         }
 
@@ -487,19 +500,11 @@
             }
         }
 
-        // ---------- Pogoda ----------
-        const WMO = {
-            0: ['Bezchmurnie', '☀️'], 1: ['Prawie bezchmurnie', '🌤️'], 2: ['Częściowe zachmurzenie', '⛅'], 3: ['Pochmurno', '☁️'],
-            45: ['Mgła', '🌫️'], 48: ['Mgła szronowa', '🌫️'],
-            51: ['Lekka mżawka', '🌦️'], 53: ['Mżawka', '🌦️'], 55: ['Silna mżawka', '🌧️'], 56: ['Marznąca mżawka', '🌧️'], 57: ['Marznąca mżawka', '🌧️'],
-            61: ['Lekki deszcz', '🌦️'], 63: ['Deszcz', '🌧️'], 65: ['Silny deszcz', '🌧️'], 66: ['Marznący deszcz', '🌧️'], 67: ['Marznący deszcz', '🌧️'],
-            71: ['Lekki śnieg', '🌨️'], 73: ['Śnieg', '❄️'], 75: ['Silny śnieg', '❄️'], 77: ['Ziarna śniegu', '❄️'],
-            80: ['Przelotny deszcz', '🌦️'], 81: ['Przelotny deszcz', '🌧️'], 82: ['Ulewa', '⛈️'],
-            85: ['Przelotny śnieg', '🌨️'], 86: ['Intensywny śnieg', '❄️'],
-            95: ['Burza', '⛈️'], 96: ['Burza z gradem', '⛈️'], 99: ['Burza z gradem', '⛈️']
-        };
-        const wmo = c => WMO[c] || ['—', '·'];
-        const HOURLY_CELLS = 12;
+        // ---------- Pogoda: wyłącznie IMGW-PIB (https://danepubliczne.imgw.pl/apiinfo) ----------
+        // API synop zwraca tylko ostatni pomiar godzinowy (bez prognozy), więc historię dnia
+        // zapamiętujemy w przeglądarce (localStorage), od momentu pierwszego otwarcia strony.
+        const HISTORY_KEY = 'imgw_zg_history_v1';
+        const HISTORY_MAX = 72;
 
         function compass(deg) {
             if (deg === null || deg === undefined || isNaN(deg)) return '';
@@ -512,72 +517,69 @@
         }
 
         // IMGW podaje godzinę pomiaru w UTC - przeliczamy na czas lokalny
-        function imgwLocalTime(o) {
+        function imgwLocal(o) {
             const [y, m, d] = String(o.data_pomiaru).split('-').map(Number);
             const dt = new Date(Date.UTC(y, m - 1, d, Number(o.godzina_pomiaru)));
-            return new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(dt);
+            return {
+                ts: dt.getTime(),
+                date: new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(dt),
+                hhmm: new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(dt)
+            };
         }
 
         async function loadImgw() {
             const d = await getJson(IMGW_URL);
             const o = Array.isArray(d) ? d[0] : d;
+            if (!o || o.temperatura === undefined) throw new Error('nieoczekiwany format odpowiedzi');
+            const loc = imgwLocal(o);
             const t = num(o.temperatura), rh = num(o.wilgotnosc_wzgledna);
             return {
+                ts: loc.ts, date: loc.date, hhmm: loc.hhmm,
                 temp: t, rh, pressure: num(o.cisnienie),
                 windMs: num(o.predkosc_wiatru), windDir: num(o.kierunek_wiatru),
-                precip: num(o.suma_opadu), dew: dewPoint(t, rh), when: imgwLocalTime(o)
+                precip: num(o.suma_opadu), dew: dewPoint(t, rh)
             };
         }
 
-        async function loadOpenMeteo() {
-            const url = 'https://api.open-meteo.com/v1/forecast'
-                + `?latitude=${LAT}&longitude=${LON}`
-                + '&current=temperature_2m,relative_humidity_2m,dew_point_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl'
-                + '&hourly=temperature_2m,precipitation,rain,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,pressure_msl'
-                + `&timezone=${encodeURIComponent(TZ)}&forecast_days=2`;
-            return getJson(url);
+        function readHistory() {
+            try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { return []; }
+        }
+        function saveHistory(list) {
+            try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch (e) { /* brak dostępu do storage - historia tylko w pamięci */ }
+        }
+        let memHistory = null;
+        function updateHistory(m) {
+            let list = memHistory || readHistory();
+            if (!list.some(x => x.ts === m.ts)) list.push(m);
+            list = list.sort((a, b) => a.ts - b.ts).slice(-HISTORY_MAX);
+            memHistory = list;
+            saveHistory(list);
+            return list;
         }
 
-        function renderHourly(h, curTime) {
-            let start = h.time.findIndex(t => t.slice(0, 13) === String(curTime).slice(0, 13));
-            if (start < 0) start = 0;
-            const end = Math.min(start + HOURLY_CELLS, h.time.length);
-            let html = '';
-            for (let i = start; i < end; i++) {
-                const snow = h.snowfall[i] || 0, prec = h.precipitation[i] || 0;
-                let p = '—', pc = 'p';
-                if (snow > 0) { p = `❄${fmt(snow, 1)}`; pc = 'p snow'; }
-                else if (prec > 0) { p = `🌧${fmt(prec, 1)}`; }
-                const g = Math.round(h.wind_gusts_10m[i]);
-                const wc = g >= 60 ? 'w high' : g >= 40 ? 'w mid' : 'w';
-                html += `<div class="hour-cell${i === start ? ' now' : ''}" title="${wmo(h.weather_code[i])[0]}">
-                    <div class="h">${h.time[i].slice(11, 16)}</div>
-                    <div class="ic">${wmo(h.weather_code[i])[1]}</div>
-                    <div class="t">${Math.round(h.temperature_2m[i])}°</div>
-                    <div class="${pc}">${p}</div>
-                    <div class="${wc}">${Math.round(h.wind_speed_10m[i])} (${g})</div>
+        function renderHourly(list) {
+            const last = list.slice(-12);
+            $('hourly').innerHTML = last.map((m, i) => {
+                const p = (m.precip ?? 0) > 0 ? `🌧${fmt(m.precip, 1)}` : '—';
+                const kmh = m.windMs !== null ? Math.round(m.windMs * 3.6) : null;
+                const wc = kmh !== null && kmh >= 60 ? 'w high' : kmh !== null && kmh >= 40 ? 'w mid' : 'w';
+                return `<div class="hour-cell${i === last.length - 1 ? ' now' : ''}">
+                    <div class="h">${m.hhmm}</div>
+                    <div class="t">${m.temp !== null ? Math.round(m.temp) + '°' : '--'}</div>
+                    <div class="p">${p}</div>
+                    <div class="${wc}">${kmh !== null ? kmh : '--'}</div>
                 </div>`;
-            }
-            $('hourly').innerHTML = html;
+            }).join('');
         }
 
-        function renderTempChart(h, curTime) {
-            const today = String(curTime).slice(0, 10);
-            const idx = h.time.map((t, i) => t.startsWith(today) ? i : -1).filter(i => i >= 0);
-            const labels = idx.map(i => h.time[i].slice(11, 16));
-            const temps = idx.map(i => h.temperature_2m[i]);
-            const rain = idx.map(i => h.precipitation[i]);
-            const nowH = parseInt(String(curTime).slice(11, 13), 10);
-            const colors = temps.map((_, i) => i === nowH ? '#f59e0b' : '#3b82f6');
-            const radius = temps.map((_, i) => i === nowH ? 5 : 2);
-            const seg = { borderDash: c => c.p0DataIndex >= nowH ? [6, 4] : undefined };
-
+        function renderTempChart(list, today) {
+            const day = list.filter(m => m.date === today);
+            const labels = day.map(m => m.hhmm);
+            const temps = day.map(m => m.temp);
+            const rain = day.map(m => m.precip ?? 0);
             if (tempChart) {
                 tempChart.data.labels = labels;
                 tempChart.data.datasets[0].data = temps;
-                tempChart.data.datasets[0].pointBackgroundColor = colors;
-                tempChart.data.datasets[0].pointRadius = radius;
-                tempChart.data.datasets[0].segment = seg;
                 tempChart.data.datasets[1].data = rain;
                 tempChart.update('none');
                 return;
@@ -586,11 +588,9 @@
                 data: {
                     labels,
                     datasets: [
-                        {
-                            type: 'line', label: 'Temperatura [°C] (przerywana = prognoza)', data: temps, yAxisID: 'y',
-                            borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.12)', borderWidth: 2.5, fill: true, tension: 0.3,
-                            pointBackgroundColor: colors, pointRadius: radius, segment: seg, order: 1
-                        },
+                        { type: 'line', label: 'Temperatura [°C]', data: temps, yAxisID: 'y',
+                          borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.12)', borderWidth: 2.5, fill: true, tension: 0.3,
+                          pointRadius: 3, order: 1 },
                         { type: 'bar', label: 'Opady [mm]', data: rain, yAxisID: 'y1', backgroundColor: 'rgba(96,165,250,0.55)', order: 2 }
                     ]
                 },
@@ -607,47 +607,31 @@
             });
         }
 
-        function setStatus(id, name, ok, msg) {
-            $(id).innerHTML = `<span class="pulse${ok ? '' : ' err'}"></span>${name}: ${ok ? msg : '<span class="err-text">' + msg + '</span>'}`;
-        }
-
         async function refreshWeather() {
-            const [imgwR, omR] = await Promise.allSettled([loadImgw(), loadOpenMeteo()]);
-            const imgw = imgwR.status === 'fulfilled' ? imgwR.value : null;
-            const om = omR.status === 'fulfilled' ? omR.value : null;
+            try {
+                const m = await loadImgw();
+                const list = updateHistory(m);
+                const today = warsawDate();
 
-            if (imgw) setStatus('imgw-status', 'IMGW-PIB', true, 'pomiar z ' + imgw.when);
-            else { console.error('IMGW:', imgwR.reason); setStatus('imgw-status', 'IMGW-PIB', false, explain(imgwR.reason)); }
-            if (om) setStatus('om-status', 'Open-Meteo', true, 'prognoza OK');
-            else { console.error('Open-Meteo:', omR.reason); setStatus('om-status', 'Open-Meteo', false, explain(omR.reason)); }
+                $('weather-temp').innerText = m.temp !== null ? fmt(m.temp, 1) + '°C' : '--°C';
+                $('weather-desc').innerText = 'Pomiar IMGW-PIB, godz. ' + m.hhmm;
+                $('wx-pressure').innerText = m.pressure !== null ? fmt(m.pressure, 1) : '--';
+                $('wx-humidity').innerText = m.rh !== null ? Math.round(m.rh) + ' %' : '--';
+                $('wx-dew').innerText = m.dew !== null ? fmt(m.dew, 1) + '°C' : '--';
+                $('wx-wind').innerText = m.windMs !== null ? `${Math.round(m.windMs * 3.6)} km/h ${compass(m.windDir)}` : '--';
+                $('weather-precip').innerText = m.precip !== null ? (m.precip > 0 ? fmt(m.precip, 1) + ' mm' : 'Brak') : '--';
 
-            const c = om ? om.current : null;
-            const temp = imgw?.temp ?? c?.temperature_2m ?? null;
-            const rh = imgw?.rh ?? c?.relative_humidity_2m ?? null;
-            const dew = imgw?.dew ?? c?.dew_point_2m ?? null;
-            const pres = imgw?.pressure ?? c?.pressure_msl ?? null;
-            const windDir = imgw?.windDir ?? c?.wind_direction_10m ?? null;
-            const windKmh = imgw?.windMs != null ? imgw.windMs * 3.6 : (c?.wind_speed_10m ?? null);
-            const precip = imgw?.precip ?? c?.precipitation ?? null;
+                const pr = list.filter(x => x.date === today && x.pressure !== null).map(x => x.pressure);
+                $('wx-pressure-range').innerText = pr.length ? `${fmt(Math.min(...pr), 1)}–${fmt(Math.max(...pr), 1)}` : '--';
 
-            $('weather-temp').innerText = temp !== null ? fmt(temp, 1) + '°C' : '--°C';
-            $('weather-desc').innerText = c ? wmo(c.weather_code)[1] + ' ' + wmo(c.weather_code)[0] : (imgw ? 'Pomiar IMGW-PIB' : 'Brak danych');
-            $('wx-pressure').innerText = pres !== null ? fmt(pres, 1) : '--';
-            $('wx-humidity').innerText = rh !== null ? Math.round(rh) + ' %' : '--';
-            $('wx-dew').innerText = dew !== null ? fmt(dew, 1) + '°C' : '--';
-            $('wx-wind').innerText = windKmh !== null
-                ? `${Math.round(windKmh)}${c ? ' (' + Math.round(c.wind_gusts_10m) + ')' : ''} ${compass(windDir)}` : '--';
-            $('weather-precip').innerText = precip !== null ? (precip > 0 ? fmt(precip, 1) + ' mm' : 'Brak') : '--';
-
-            if (om) {
-                const h = om.hourly;
-                const today = String(c.time).slice(0, 10);
-                const pr = h.pressure_msl.filter((_, i) => h.time[i].startsWith(today));
-                $('wx-pressure-range').innerText = pr.length ? `${fmt(Math.min(...pr), 0)}–${fmt(Math.max(...pr), 0)}` : '--';
-                renderHourly(h, c.time);
-                renderTempChart(h, c.time);
-            } else {
-                $('hourly').innerHTML = '<span class="sub-info err-text">Brak prognozy godzinowej - Open-Meteo niedostępne.</span>';
+                renderHourly(list);
+                renderTempChart(list, today);
+                $('imgw-status').innerHTML = '<span class="pulse"></span>IMGW-PIB: stacja Zielona Góra (12400)';
+                $('imgw-time').innerText = 'sprawdzono ' + nowStr();
+            } catch (err) {
+                console.error('IMGW:', err);
+                $('imgw-status').innerHTML = `<span class="pulse err"></span>IMGW-PIB: <span class="err-text">${explain(err)}</span>`;
+                $('weather-desc').innerText = 'Błąd pobierania';
             }
         }
 
@@ -657,7 +641,7 @@
         refreshDashboard();
         setInterval(refreshRb, PSE_REFRESH_MS);   // ceny RB: co 30 s
         setInterval(refreshKse, 15 * 1000);       // Mapa KSE: co 15 s
-        setInterval(refreshWeather, 10 * 60 * 1000);                       // pogoda: co 10 min
+        setInterval(refreshWeather, 5 * 60 * 1000);                        // pogoda IMGW: co 5 min
     </script>
 </body>
 </html>
