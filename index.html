@@ -38,11 +38,11 @@
         
         .grid { 
             display: grid; 
-            grid-template-columns: 1.8fr 1fr 1.3fr; 
+            grid-template-columns: 1.4fr 1fr; 
             gap: 20px; 
             margin-bottom: 24px; 
         }
-        @media (max-width: 1400px) {
+        @media (max-width: 1200px) {
             .grid { grid-template-columns: 1fr; }
         }
         
@@ -146,6 +146,7 @@
         .wx-alert.cold { background: rgba(147,51,234,0.15); border-color: #9333ea; color: #d8b4fe; }
         .wx-alert.frost { background: rgba(59,130,246,0.15); border-color: #3b82f6; color: #93c5fd; }
         .wx-alert.wind { background: rgba(245,158,11,0.15); border-color: #f59e0b; color: #fcd34d; }
+        .wx-alert.rain-warn { background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #93c5fd; }
 
         #cen-card:fullscreen, #cen-card:-webkit-full-screen { 
             background: var(--card-bg); padding: 30px; display: flex; flex-direction: column; 
@@ -171,7 +172,8 @@
 
     <header>
         <div>
-            <h1>⚡ PSE + Pogoda</h1>
+            <h1>⚡ Ceny RB + Pogoda (Zielona Góra)</h1>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny Rynku Bilansującego oraz parametry pogody ZG na sieć | Klawisz F11 = Pełny Ekran</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div style="text-align: right;">
@@ -187,7 +189,7 @@
         <!-- CEN -->
         <div class="card" id="cen-card" style="border: 2px solid var(--border-color);">
             <h2>
-                <span>Ceny na Rynku Bilansującym PSE</span>
+                <span>Ceny na Rynku Bilansującym (RB)</span>
                 <button class="secondary" onclick="toggleCenFullscreen()" style="padding: 6px 12px; font-size: 0.8rem;">📺 Powiększ ten panel</button>
             </h2>
             <div><span id="cen-period" class="period">Okres: --</span></div>
@@ -226,67 +228,9 @@
             </div>
         </div>
 
-        <!-- KSE -->
-        <div class="card" style="border: 2px solid var(--accent-blue);">
-            <h2>Bilans KSE na żywo</h2>
-            <div class="kse-box" style="margin-top: 6px;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
-                        <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">ZAPOTRZEBOWANIE</td>
-                        <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--accent-blue);" id="kse-demand">--</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
-                        <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">GENERACJA</td>
-                        <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--accent-green);" id="kse-gen">--</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
-                        <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">SUMA PRZEPŁYWÓW NETTO</td>
-                        <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--accent-orange);" id="kse-saldo">--</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">CZĘSTOTLIWOŚĆ</td>
-                        <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--text-main);" id="kse-freq">--</td>
-                    </tr>
-                </table>
-
-                <div style="margin-top: 20px;">
-                    <h3 style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">
-                        Struktura generacji
-                    </h3>
-
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr>
-                            <td style="padding: 7px 4px; color: var(--text-muted); font-size: 0.78rem;">Źródła cieplne</td>
-                            <td id="kse-thermal" style="text-align: right; font-family: 'JetBrains Mono', monospace;">—</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 7px 4px; color: var(--text-muted); font-size: 0.78rem;">Elektrownie wodne</td>
-                            <td id="kse-hydro" style="text-align: right; font-family: 'JetBrains Mono', monospace;">—</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 7px 4px; color: var(--text-muted); font-size: 0.78rem;">Energetyka wiatrowa</td>
-                            <td id="kse-wind" style="text-align: right; font-family: 'JetBrains Mono', monospace;">—</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 7px 4px; color: var(--text-muted); font-size: 0.78rem;">Fotowoltaika (PV)</td>
-                            <td id="kse-pv" style="text-align: right; font-family: 'JetBrains Mono', monospace;">—</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 7px 4px; color: var(--text-muted); font-size: 0.78rem;">Pozostałe źródła</td>
-                            <td id="kse-other" style="text-align: right; font-family: 'JetBrains Mono', monospace;">—</td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-            <div class="status-bar">
-                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">Wczytywanie...</span></span>
-                <span id="kse-update-time">--</span>
-            </div>
-        </div>
-
         <!-- POGODA -->
         <div class="card">
-            <h2>Pogoda Zielona Góra</h2>
+            <h2>Pogoda ZG (Sieć Cieplna)</h2>
             <div class="wx-top">
                 <div id="weather-temp" class="value-huge" style="font-size: 2.2rem;">--°C</div>
                 <div id="weather-desc" style="font-size: 0.75rem; color: var(--text-muted);">Pobieranie...</div>
@@ -314,7 +258,7 @@
     <!-- POGODA WYKRES DOLNY -->
     <div class="charts-grid">
         <div class="card">
-            <h2>Wykres pogody Zielona Góra</h2>
+            <h2>Temperatura godzinowa i opady - Zielona Góra</h2>
             <div class="chart-container"><canvas id="tempChart"></canvas></div>
         </div>
     </div>
@@ -330,9 +274,7 @@
         let lastNotifiedPeriod = null; 
         let titleInterval = null;
         let soundMuted = localStorage.getItem('pse_sound_muted') === 'true';
-        let kseLastGoodMeasurementTime = null; 
         let lastDailyReloadKey = localStorage.getItem('pse_last_daily_reload_key') || null;
-        let kseInFlight = false;
         let weatherInFlight = false;
         let lastTrackedPrice = null;
 
@@ -683,178 +625,6 @@
             try { const { series, date } = await loadRbPrices(); renderRbCard(series, date); renderRbChart(series); } catch (err) { renderRbError(err); }
         }
 
-        let activeKseEndpointIndex = 0; 
-        
-        async function refreshKse() {
-            if (kseInFlight) return;
-            kseInFlight = true;
-
-            const numberOrNull = value => {
-                if (value === null || value === undefined || value === '') return null;
-                const number = Number(value);
-                return Number.isFinite(number) ? number : null;
-            };
-
-            const formatMW = value => {
-                const number = numberOrNull(value);
-                return number === null ? '—' : `${Math.round(number).toLocaleString('pl-PL')} MW`;
-            };
-
-            let data = null;
-            let values = null;
-            let sourceName = '';
-
-            const endpoints = [
-                { url: 'https://pvindex.pl/api/v1/stats/pse-system/current', name: 'API PV Index' },
-                { url: 'https://pse-kse-proxy.lewwraff.workers.dev/', name: 'Proxy: Cloudflare Worker' },
-                { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://pvindex.pl/api/v1/stats/pse-system/current'), name: 'Proxy: Publiczna bramka' }
-            ];
-
-            try {
-                for (let attempt = 0; attempt < endpoints.length; attempt++) {
-                    const idx = (activeKseEndpointIndex + attempt) % endpoints.length;
-                    const ep = endpoints[idx];
-                    
-                    try {
-                        let j = await fetchJsonWithTimeout(ep.url, 10000);
-                        if (j && j.contents && typeof j.contents === 'string') {
-                            try { j = JSON.parse(j.contents); } catch(e){}
-                        }
-                        
-                        if (j && (j.demand !== undefined || (j.data && j.data.podsumowanie) || j.generation !== undefined)) {
-                            data = j;
-                            sourceName = ep.name;
-                            activeKseEndpointIndex = idx; 
-                            break; 
-                        }
-                    } catch (e) {
-                        console.warn(`Zablokowano połączenie KSE: ${ep.name}`);
-                    }
-                }
-
-                if (!data) {
-                    throw new Error('Wszystkie źródła KSE zostały zablokowane lub nie odpowiadają.');
-                }
-
-                values = data.data && typeof data.data === 'object' && !Array.isArray(data.data) 
-                    ? { ...data, ...data.data } 
-                    : data;
-
-                const demand = numberOrNull(values.demand);
-                const generation = numberOrNull(values.generation);
-                const frequency = numberOrNull(values.frequency);
-
-                const thermal = numberOrNull(values.thermal);
-                const hydro = numberOrNull(values.hydro);
-                const wind = numberOrNull(values.wind);
-                const pv = numberOrNull(values.pv);
-                const other = numberOrNull(values.other);
-
-                const flowKeys = ['flow_se', 'flow_de', 'flow_cz', 'flow_sk', 'flow_ua', 'flow_lt'];
-                const flowValues = flowKeys.map(key => numberOrNull(values[key])).filter(value => value !== null);
-
-                const hasAnyMeasurement = demand !== null || generation !== null || frequency !== null || flowValues.length > 0;
-
-                if (!hasAnyMeasurement || values.error) {
-                    throw new Error('Pobrano pusty lub błędny JSON z KSE');
-                }
-
-                const saldo = flowValues.length === flowKeys.length ? flowValues.reduce((sum, value) => sum + value, 0) : null;
-
-                if (demand !== null) $('kse-demand').innerText = formatMW(demand);
-                if (generation !== null) $('kse-gen').innerText = formatMW(generation);
-                if (saldo !== null) $('kse-saldo').innerText = saldo > 0 ? '+' + formatMW(saldo) : formatMW(saldo);
-                
-                if (frequency !== null) {
-                    const freqEl = $('kse-freq');
-                    freqEl.innerText = `${frequency.toLocaleString('pl-PL', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} Hz`;
-                    const deviation = Math.abs(frequency - 50);
-                    if (deviation >= 0.1) {
-                        freqEl.style.color = 'var(--accent-red)';
-                    } else if (deviation >= 0.05) {
-                        freqEl.style.color = 'var(--accent-orange)';
-                    } else {
-                        freqEl.style.color = 'var(--accent-green)';
-                    }
-                }
-
-                if (thermal !== null) $('kse-thermal').innerText = formatMW(thermal);
-                if (hydro !== null) $('kse-hydro').innerText = formatMW(hydro);
-                if (wind !== null) $('kse-wind').innerText = formatMW(wind);
-                if (pv !== null) $('kse-pv').innerText = formatMW(pv);
-                if (other !== null) $('kse-other').innerText = formatMW(other);
-
-                const pulse = $('kse-pulse');
-                const status = $('kse-status');
-
-                let timestamp = values.timestamp || values.created_at;
-                if (!timestamp && values.dtime) timestamp = values.dtime; 
-                if (!timestamp && values.source_datetime) timestamp = values.source_datetime;
-                
-                const timestampMs = timestamp ? Date.parse(timestamp) : NaN;
-                const validTimestamp = Number.isFinite(timestampMs);
-                const ageMs = validTimestamp ? Date.now() - timestampMs : null;
-
-                const MAX_AGE_MS = 3 * 60 * 1000;
-                const FUTURE_TOLERANCE_MS = 60 * 1000;
-
-                const staleByAge = ageMs !== null && (ageMs > MAX_AGE_MS || ageMs < -FUTURE_TOLERANCE_MS);
-                const stale = values.stale === true;
-
-                pulse.classList.remove('err', 'warn');
-                status.classList.remove('err-text', 'warn-text');
-
-                const measurementTime = validTimestamp
-                    ? new Date(timestampMs).toLocaleTimeString('pl-PL', { timeZone: TZ })
-                    : null;
-
-                if (stale) {
-                    pulse.classList.add('warn');
-                    status.classList.add('warn-text');
-                    status.innerText = `${sourceName}: kopia awaryjna`;
-                } else if (!validTimestamp) {
-                    pulse.classList.add('warn');
-                    status.classList.add('warn-text');
-                    status.innerText = `${sourceName}: brak czasu pomiaru`;
-                } else if (ageMs < -FUTURE_TOLERANCE_MS) {
-                    pulse.classList.add('warn');
-                    status.classList.add('warn-text');
-                    status.innerText = `${sourceName}: zły czas pomiaru`;
-                } else if (staleByAge) {
-                    pulse.classList.add('warn');
-                    status.classList.add('warn-text');
-                    status.innerText = `${sourceName}: pomiar opóźniony`;
-                } else {
-                    status.innerText = `${sourceName}: pomiar na żywo`;
-                }
-
-                if (measurementTime) {
-                    kseLastGoodMeasurementTime = measurementTime;
-                    const ageMinutes = Math.max(0, Math.floor(ageMs / 60000));
-                    const ageLabel = ageMinutes === 0 ? 'poniżej 1 min' : `${ageMinutes} min`;
-                    $('kse-update-time').innerText = `Pomiar: ${measurementTime} · Wiek: ${ageLabel} · Sprawdzono: ${nowStr()}`;
-                } else {
-                    $('kse-update-time').innerText = `Brak czasu pomiaru · Sprawdzono: ${nowStr()}`;
-                }
-
-            } catch (error) {
-                console.error('Błąd odświeżania KSE:', error);
-                
-                $('kse-pulse').classList.remove('warn');
-                $('kse-pulse').classList.add('err');
-                
-                $('kse-status').classList.remove('warn-text');
-                $('kse-status').classList.add('err-text');
-                
-                $('kse-status').innerText = 'Błąd pobierania — ostatnie dane zachowane';
-
-                $('kse-update-time').innerText =
-                    `${kseLastGoodMeasurementTime ? 'Ostatni pomiar: ' + kseLastGoodMeasurementTime + ' · ' : ''}Błąd sieci · Spr: ${nowStr()}`;
-            } finally {
-                kseInFlight = false;
-            }
-        }
-
         // ---------- POGODA ----------
         const WMO = {
             0:  ['Bezchmurnie', '☀️'],
@@ -1117,6 +887,26 @@
                     </div>`;
                 }
 
+                // Skanowanie nadchodzących opadów w ciągu najbliższych 2 godzin
+                const currentIdx = h.time.findIndex(t => t.slice(0, 13) === String(c.time).slice(0, 13));
+                if (currentIdx >= 0) {
+                    const currentPrec = h.precipitation[currentIdx] || 0;
+                    for (let i = 1; i <= 2; i++) {
+                        const targetIdx = currentIdx + i;
+                        if (targetIdx < h.time.length) {
+                            const p = h.precipitation[targetIdx] || 0;
+                            const snow = h.snowfall[targetIdx] || 0;
+                            if ((p > 0.1 || snow > 0.1) && currentPrec <= 0.1) {
+                                const precipType = snow > 0.1 ? 'śnieg' : 'deszcz';
+                                const icon = precipType === 'śnieg' ? '❄️' : '🌧️';
+                                const timeText = i === 1 ? 'za około godzinę' : `za ok. ${i} godziny`;
+                                alertsHtml += `<div class="wx-alert rain-warn">${icon} NADCHODZĄCE OPADY: Prognozowany ${precipType} ${timeText}</div>`;
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 if (minTemp12h <= currentTemp - 5) {
                     alertsHtml += `<div class="wx-alert cold">📉 OCHŁODZENIE: Prognozowany spadek do ${Math.round(minTemp12h)}°C w ciągu 12h (uwaga na bezwładność sieci)</div>`;
                 }
@@ -1150,11 +940,10 @@
             }
         }
 
-        function refreshDashboard() { refreshRb(); refreshKse(); refreshWeather(); }
+        function refreshDashboard() { refreshRb(); refreshWeather(); }
 
         refreshDashboard();
         setInterval(refreshRb, PSE_REFRESH_MS);
-        setInterval(refreshKse, 15000);
         setInterval(refreshWeather, 10 * 60 * 1000);
     </script>
 </body>
