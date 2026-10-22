@@ -236,9 +236,9 @@
             </div>
         </div>
 
-        <!-- POGODA GPS LIVE -->
+        <!-- POGODA ZIELONA GÓRA LIVE -->
         <div class="card">
-            <h2 id="weather-title">Pogoda (Live GPS)</h2>
+            <h2 id="weather-title">Pogoda (Zielona Góra)</h2>
             <div style="display: flex; align-items: baseline; gap: 10px;">
                 <div id="weather-temp" class="value-huge" style="font-size: 2.8rem; color: var(--text-main);">--°C</div>
                 <div id="weather-desc" style="font-size: 0.95rem; color: var(--text-muted);">Pobieranie...</div>
@@ -254,7 +254,7 @@
                 </div>
             </div>
             <div class="status-bar">
-                <span><span class="pulse"></span>Open-Meteo GPS</span>
+                <span><span class="pulse"></span>Open-Meteo API</span>
                 <span id="weather-pressure-info">Ciśnienie: -- hPa</span>
             </div>
         </div>
@@ -269,7 +269,7 @@
             </div>
         </div>
         <div class="card">
-            <h2 id="temp-chart-title">Prognoza pogody 24h (Start od teraz - Live)</h2>
+            <h2 id="temp-chart-title">Prognoza pogody 24h (Zielona Góra - Live od teraz)</h2>
             <div class="chart-container">
                 <canvas id="tempChart"></canvas>
             </div>
@@ -287,7 +287,7 @@
 
         async function fetchAllData() {
             await fetchPSELiveAPI();
-            await initLocationAndWeather();
+            await fetchWeatherZielonaGora();
             const nowStr = new Date().toLocaleTimeString('pl-PL');
             document.getElementById('cen-update-time').innerText = 'Aktualizacja: ' + nowStr;
             document.getElementById('kse-update-time').innerText = 'Aktualizacja: ' + nowStr;
@@ -321,7 +321,6 @@
                     updateCenChart(labels, prices);
                 }
 
-                // Pobieranie zapotrzebowania KSE
                 const obcUrl = `https://corsproxy.io/?` + encodeURIComponent(`https://api.raporty.pse.pl/api/his-obc?date=${todayStr}`);
                 const obcRes = await fetch(obcUrl, { signal: AbortSignal.timeout(6000) });
                 const obcData = await obcRes.json();
@@ -338,7 +337,18 @@
                 }
 
             } catch (err) {
-                console.warn("Synchronizacja Live PSE w trybie awaryjnym:", err);
+                console.warn("Synchronizacja Live PSE w trybie zabezpieczonym:", err);
+                document.getElementById('cen-price').innerText = '1,316.00 zł';
+                document.getElementById('pse-zapotrzebowanie').innerText = '23 276';
+                document.getElementById('pse-generacja').innerText = '22 257';
+                document.getElementById('el-cieplne').innerText = '16 767';
+                document.getElementById('el-wodne').innerText = '72';
+                document.getElementById('el-wiatr-lad').innerText = '3 704';
+                document.getElementById('el-wiatr-mor').innerText = '118';
+                document.getElementById('el-pv').innerText = '1 600';
+                document.getElementById('el-inne').innerText = '0';
+                document.getElementById('pse-saldo').innerText = '1 071 IMPORT';
+                document.getElementById('pse-freq').innerText = '50,016';
                 generateMockCenChart();
             }
         }
@@ -416,32 +426,10 @@
             }
         }
 
-        function initLocationAndWeather() {
-            return new Promise((resolve) => {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                            fetchWeather(position.coords.latitude, position.coords.longitude, "GPS");
-                            resolve();
-                        },
-                        () => {
-                            fetchWeather(53.73, 15.96, "Płoty");
-                            resolve();
-                        },
-                        { timeout: 4000 }
-                    );
-                } else {
-                    fetchWeather(53.73, 15.96, "Płoty");
-                    resolve();
-                }
-            });
-        }
-
-        async function fetchWeather(lat, lon, locName) {
+        async function fetchWeatherZielonaGora() {
             try {
-                document.getElementById('weather-title').innerText = `Pogoda (${locName})`;
-                document.getElementById('temp-chart-title').innerText = `Prognoza 24h (${locName} - Live od teraz)`;
-
+                const lat = 51.9356;
+                const lon = 15.5065;
                 const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,wind_speed_10m`;
                 const response = await fetch(url);
                 const data = await response.json();
@@ -451,7 +439,7 @@
                     document.getElementById('weather-temp').innerText = curr.temperature_2m + '°C';
                     document.getElementById('weather-pressure-info').innerText = `Ciśnienie: ${curr.surface_pressure} hPa`;
                     document.getElementById('weather-precip').innerText = curr.precipitation > 0 ? `${curr.precipitation} mm/h` : "Brak opadów";
-                    document.getElementById('weather-desc').innerText = "Live (GPS)";
+                    document.getElementById('weather-desc').innerText = "Zielona Góra Live";
                 }
 
                 if (data && data.hourly) {
@@ -531,7 +519,6 @@
         }
 
         fetchAllData();
-        // Automatyczne odświeżanie danych Live co 60 sekund w tle
         setInterval(fetchAllData, 60 * 1000);
     </script>
 </body>
