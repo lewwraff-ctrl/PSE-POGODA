@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -54,14 +55,15 @@
             min-width: 0; 
         }
 
-        .card.alarm-teal { animation: none !important; }
-        .card.alarm-sky { animation: none !important; }
-        .card.alarm-blue { animation: none !important; }
-        .card.alarm-indigo { animation: none !important; }
-        .card.alarm-red { animation: none !important; }
-        .card.alarm-darkred { animation: none !important; }
-        .card.alarm-purple { animation: none !important; }
-        .card[class*="alarm-"] { animation: none !important; }
+        /* Jednorazowe mignięcie kafelka przy zmianie ceny */
+        @keyframes flash-tile {
+            0% { background-color: var(--card-bg); box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+            50% { background-color: rgba(59, 130, 246, 0.35); box-shadow: 0 0 30px rgba(59, 130, 246, 0.9); }
+            100% { background-color: var(--card-bg); box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        .card.flash-animation {
+            animation: flash-tile 0.8s ease-out 1;
+        }
 
         .card h2 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
         .card .status-bar { margin-top: auto; }
@@ -334,6 +336,7 @@
         let lastDailyReloadKey = null;
         let kseInFlight = false;
         let weatherInFlight = false;
+        let lastTrackedPrice = null; // Zmienna do wykrywania zmiany ceny
 
         const $ = id => document.getElementById(id);
         const pad = n => String(n).padStart(2, '0');
@@ -549,22 +552,22 @@
             let alertType = null; let speechText = ''; let titleAlert = ''; let color = '';
 
             if (price < -5000) {
-                color = '#c026d3'; card.classList.add('alarm-teal'); alertType = 'neg5';
+                color = '#c026d3'; alertType = 'neg5';
                 speechText = `Krytyczna cena ujemna! Wynosi ${Math.round(price)} złotych.`; titleAlert = `MINUS >5000: ${Math.round(price)} zł`;
             } else if (price < -2000) {
-                color = '#14b8a6'; card.classList.add('alarm-teal'); alertType = 'neg4';
+                color = '#14b8a6'; alertType = 'neg4';
                 speechText = `Ekstremalna cena ujemna w systemie! Wynosi ${Math.round(price)} złotych.`; titleAlert = `MINUS >2000: ${Math.round(price)} zł`;
             } else if (price < -1000) {
-                color = '#06b6d4'; card.classList.add('alarm-teal'); alertType = 'neg3';
+                color = '#06b6d4'; alertType = 'neg3';
                 speechText = `Bardzo niska cena ujemna! Wynosi ${Math.round(price)} złotych.`; titleAlert = `MINUS >1000: ${Math.round(price)} zł`;
             } else if (price < -500) {
-                color = '#0ea5e9'; card.classList.add('alarm-sky'); alertType = 'neg2';
+                color = '#0ea5e9'; alertType = 'neg2';
                 speechText = `Głęboka cena ujemna. Wynosi ${Math.round(price)} złotych.`; titleAlert = `MINUS >500: ${Math.round(price)} zł`;
             } else if (price < -200) {
-                color = '#3b82f6'; card.classList.add('alarm-blue'); alertType = 'neg1';
+                color = '#3b82f6'; alertType = 'neg1';
                 speechText = `Uwaga. Znaczna cena ujemna! Wynosi ${Math.round(price)} złotych.`; titleAlert = `MINUS >200: ${Math.round(price)} zł`;
             } else if (price < 0) {
-                color = '#818cf8'; card.classList.add('alarm-indigo'); alertType = 'neg0';
+                color = '#818cf8'; alertType = 'neg0';
                 speechText = `Ostrzeżenie. Cena na rynku spadła poniżej zera i wynosi ${Math.round(price)} złotych.`; titleAlert = `CENA UJEMNA: ${Math.round(price)} zł`;
             } else if (price < 200) {
                 color = '#10b981'; 
@@ -575,16 +578,16 @@
             } else if (price < 1000) {
                 color = '#f59e0b'; 
             } else if (price < 2000) {
-                color = '#ef4444'; card.classList.add('alarm-red'); alertType = 'red';
+                color = '#ef4444'; alertType = 'red';
                 speechText = `Alarm! Cena wzrosła do ${Math.round(price)} złotych.`; titleAlert = `WYSOKA CENA: ${Math.round(price)} zł`;
             } else if (price < 4000) {
-                color = '#b91c1c'; card.classList.add('alarm-darkred'); alertType = 'darkred';
+                color = '#b91c1c'; alertType = 'darkred';
                 speechText = `Krytycznie wysoka cena! ${Math.round(price)} złotych.`; titleAlert = `KRYTYCZNA CENA: ${Math.round(price)} zł`;
             } else if (price < 5000) {
-                color = '#9333ea'; card.classList.add('alarm-purple'); alertType = 'purple';
+                color = '#9333ea'; alertType = 'purple';
                 speechText = `Ekstremalna cena w systemie! ${Math.round(price)} złotych.`; titleAlert = `EKSTREMALNA CENA: ${Math.round(price)} zł`;
             } else {
-                color = '#ec4899'; card.classList.add('alarm-purple'); alertType = 'max';
+                color = '#ec4899'; alertType = 'max';
                 speechText = `Maksymalna cena w systemie! ${Math.round(price)} złotych.`; titleAlert = `MAX CENA: ${Math.round(price)} zł`;
             }
 
@@ -613,6 +616,15 @@
             const cenEl = $('cen-price');
             cenEl.innerText = fmt(last.cen);
             
+            // Wykrywanie zmiany ceny -> jednorazowe mignięcie kafelka
+            if (lastTrackedPrice !== null && lastTrackedPrice !== last.cen) {
+                const card = $('cen-card');
+                card.classList.remove('flash-animation');
+                void card.offsetWidth; // reset reflow
+                card.classList.add('flash-animation');
+            }
+            lastTrackedPrice = last.cen;
+
             $('cor-price').innerText = fmt(last.cor);
             $('ckoeb-price').innerText = fmt(last.ckoeb);
             
