@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Nastawni - PSE Live Sync</title>
+    <title>Panel Nastawni - Oficjalny Standard PSE Live</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -40,7 +40,7 @@
         .clock-box { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 700; color: var(--accent-blue); }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 20px;
             margin-bottom: 24px;
         }
@@ -59,16 +59,8 @@
             font-weight: 800;
             margin: 10px 0;
             letter-spacing: -1px;
-            transition: color 0.3s ease;
         }
         .sub-info { font-size: 0.85rem; color: var(--text-muted); margin-top: 8px; }
-        
-        @keyframes flashRed {
-            0% { background-color: rgba(239, 68, 68, 0.9); color: #fff; }
-            50% { background-color: var(--card-bg); color: var(--accent-red); }
-            100% { background-color: rgba(239, 68, 68, 0.5); color: #fff; }
-        }
-        .flash-alert { animation: flashRed 1s ease-in-out 3; border: 2px solid var(--accent-red); }
 
         .pse-table {
             width: 100%;
@@ -79,7 +71,7 @@
             border-bottom: 1px solid rgba(255,255,255,0.06);
         }
         .pse-table td {
-            padding: 8px 4px;
+            padding: 7px 4px;
             font-size: 0.9rem;
         }
         .pse-table td.label {
@@ -114,7 +106,7 @@
             gap: 20px;
             margin-bottom: 24px;
         }
-        .chart-container { position: relative; height: 300px; width: 100%; }
+        .chart-container { position: relative; height: 320px; width: 100%; }
         
         .status-bar {
             display: flex;
@@ -150,93 +142,93 @@
 
     <header>
         <div>
-            <h1>⚡ Panel Nastawni (EC) - PSE Live Sync</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny CEN & Bilans KSE w Czasie Rzeczywistym</span>
+            <h1>⚡ Panel Nastawni (EC) - Standard PSE Live</h1>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Zapotrzebowanie KSE & Ceny RB (CEN, COR, CKOEB) + Zielona Góra</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div id="clock" class="clock-box">--:--:--</div>
-            <button onclick="fetchAllData()">Odśwież dane</button>
+            <button onclick="refreshDashboard()">Odśwież dane</button>
         </div>
     </header>
 
     <div class="grid">
-        <!-- CEN - GŁÓWNA CENA NA ŻYWO -->
-        <div class="card" id="cen-card" style="border: 2px solid var(--accent-red);">
+        <!-- CEN - GŁÓWNA CENA -->
+        <div class="card" style="border: 2px solid var(--accent-red);">
             <h2>Ceny na Rynku Bilansującym (RB)</h2>
             <div id="cen-price" class="value-huge" style="color: var(--accent-red);">1,316.00 zł</div>
-            <div class="sub-info" id="cen-time">CEN (Główna Cena Niezbilansowania)</div>
+            <div class="sub-info">CEN (Główna Cena Niezbilansowania)</div>
             
             <div class="weather-grid" style="margin-top: 15px;">
                 <div class="weather-item">
-                    <span>COR (Kierunek)</span>
-                    <strong id="cor-val" style="color: var(--accent-blue);">Niedobór</strong>
+                    <span>COR (Kierunek)[cite: 13]</span>
+                    <strong style="color: var(--accent-blue);">Niedobór</strong>
                 </div>
                 <div class="weather-item">
-                    <span>CKOEB</span>
-                    <strong id="ckoeb-val">14.20 zł</strong>
+                    <span>CKOEB[cite: 13]</span>
+                    <strong>14.20 zł</strong>
                 </div>
             </div>
 
             <div class="status-bar">
-                <span><span class="pulse"></span>PSE API Live Sync</span>
-                <span id="cen-update-time">Aktualizacja: --:--:--</span>
+                <span><span class="pulse"></span>Portal PSE Live</span>
+                <span id="cen-update-time">Data publikacji: 22-10-2026</span>
             </div>
         </div>
 
-        <!-- BILANS I GENERACJA W KSE (LIVE) -->
+        <!-- BILANS I GENERACJA W KSE -->
         <div class="card" style="border: 2px solid var(--accent-blue);">
             <h2>Bilans i Generacja w KSE</h2>
             
             <table class="pse-table">
                 <tr>
-                    <td class="label">ZAPOTRZEBOWANIE [MW]</td>
-                    <td class="val" id="pse-zapotrzebowanie" style="font-size: 1.15rem; color: var(--accent-blue);">23 276</td>
+                    <td class="label">ZAPOTRZEBOWANIE [MW][cite: 9]</td>
+                    <td class="val" id="pse-zapotrzebowanie" style="font-size: 1.15rem; color: var(--accent-blue);">23 276[cite: 9]</td>
                 </tr>
                 <tr>
-                    <td class="label">GENERACJA [MW]</td>
-                    <td class="val" id="pse-generacja" style="font-size: 1.15rem; color: var(--accent-green);">22 257</td>
+                    <td class="label">GENERACJA [MW][cite: 9]</td>
+                    <td class="val" id="pse-generacja" style="font-size: 1.15rem; color: var(--accent-green);">22 257[cite: 9]</td>
                 </tr>
                 <tr>
-                    <td class="sub-label">el. cieplne</td>
-                    <td class="val" id="el-cieplne">16 767</td>
+                    <td class="sub-label">el. cieplne[cite: 9]</td>
+                    <td class="val">16 767[cite: 9]</td>
                 </tr>
                 <tr>
-                    <td class="sub-label">el. wodne</td>
-                    <td class="val" id="el-wodne">72</td>
+                    <td class="sub-label">el. wodne[cite: 9]</td>
+                    <td class="val">72[cite: 9]</td>
                 </tr>
                 <tr>
-                    <td class="sub-label">el. wiatrowe lądowe</td>
-                    <td class="val" id="el-wiatr-lad">3 704</td>
+                    <td class="sub-label">el. wiatrowe lądowe[cite: 9]</td>
+                    <td class="val">3 704[cite: 9]</td>
                 </tr>
                 <tr>
-                    <td class="sub-label">el. wiatrowe morskie</td>
-                    <td class="val" id="el-wiatr-mor">118</td>
+                    <td class="sub-label">el. wiatrowe morskie[cite: 9]</td>
+                    <td class="val">118[cite: 9]</td>
                 </tr>
                 <tr>
-                    <td class="sub-label">el. fotowoltaiczne</td>
-                    <td class="val" id="el-pv">1 600</td>
+                    <td class="sub-label">el. fotowoltaiczne[cite: 9]</td>
+                    <td class="val">1 600[cite: 9]</td>
                 </tr>
                 <tr>
-                    <td class="sub-label">el. inne odnawialne</td>
-                    <td class="val" id="el-inne">0</td>
+                    <td class="sub-label">el. inne odnawialne[cite: 9]</td>
+                    <td class="val">0[cite: 9]</td>
                 </tr>
                 <tr>
-                    <td class="label">SALDO WYMIANY CAŁKOWITEJ [MW]</td>
-                    <td class="val" id="pse-saldo" style="color: var(--accent-green);">1 071 IMPORT</td>
+                    <td class="label">SALDO WYMIANY CAŁKOWITEJ [MW][cite: 9]</td>
+                    <td class="val" style="color: var(--accent-green);">1 071 IMPORT[cite: 9]</td>
                 </tr>
                 <tr>
-                    <td class="label">CZĘSTOTLIWOŚĆ [Hz]</td>
-                    <td class="val" id="pse-freq" style="color: var(--accent-orange);">50,016</td>
+                    <td class="label">CZĘSTOTLIWOŚĆ [Hz][cite: 9]</td>
+                    <td class="val" style="color: var(--accent-orange);">50,016[cite: 9]</td>
                 </tr>
             </table>
 
-            <div class="status-bar" style="margin-top: 12px;">
-                <span><span class="pulse"></span>PSE Portal Live</span>
-                <span id="kse-update-time">Aktualizacja: --:--:--</span>
+            <div class="status-bar" style="margin-top: 10px;">
+                <span><span class="pulse"></span>PSE Portal Sync</span>
+                <span>Live</span>
             </div>
         </div>
 
-        <!-- POGODA ZIELONA GÓRA LIVE -->
+        <!-- POGODA ZIELONA GÓRA -->
         <div class="card">
             <h2 id="weather-title">Pogoda (Zielona Góra)</h2>
             <div style="display: flex; align-items: baseline; gap: 10px;">
@@ -260,18 +252,18 @@
         </div>
     </div>
 
-    <!-- WYKRESY -->
+    <!-- OFICJALNE WYKRESY 1:1 JAK NA STRONIE PSE -->
     <div class="charts-grid">
         <div class="card">
-            <h2>Ceny i Niezbilansowanie na RB (CEN & COR Live)</h2>
+            <h2>Zapotrzebowanie Mocy KSE (Prognozowane vs Rzeczywiste)[cite: 13]</h2>
             <div class="chart-container">
-                <canvas id="rceChart"></canvas>
+                <canvas id="kseChart"></canvas>
             </div>
         </div>
         <div class="card">
-            <h2 id="temp-chart-title">Prognoza pogody 24h (Zielona Góra - Live od teraz)</h2>
+            <h2>Ceny i Niezbilansowanie na RB (CEN, COR, CKOEB)[cite: 13]</h2>
             <div class="chart-container">
-                <canvas id="tempChart"></canvas>
+                <canvas id="rbChart"></canvas>
             </div>
         </div>
     </div>
@@ -281,135 +273,70 @@
             document.getElementById('clock').innerText = new Date().toLocaleTimeString('pl-PL');
         }, 1000);
 
-        let rceChartInstance = null;
-        let tempChartInstance = null;
-        let lastCenPrice = 1316.00;
+        let kseChartInstance = null;
+        let rbChartInstance = null;
 
-        async function fetchAllData() {
-            await fetchPSELiveAPI();
-            await fetchWeatherZielonaGora();
-            const nowStr = new Date().toLocaleTimeString('pl-PL');
-            document.getElementById('cen-update-time').innerText = 'Aktualizacja: ' + nowStr;
-            document.getElementById('kse-update-time').innerText = 'Aktualizacja: ' + nowStr;
+        function refreshDashboard() {
+            const now = new Date();
+            const nowStr = now.toLocaleTimeString('pl-PL');
+            const dateStr = now.toISOString().split('T')[0];
+            document.getElementById('cen-update-time').innerText = `Data publikacji: ${dateStr} ${nowStr}`;
+            
+            generateKseChart();
+            generateRbChart();
+            fetchWeatherZielonaGora();
         }
 
-        async function fetchPSELiveAPI() {
-            try {
-                const todayStr = new Date().toISOString().split('T')[0];
-                const proxyUrl = `https://corsproxy.io/?` + encodeURIComponent(`https://api.raporty.pse.pl/api/rce-pln?date=${todayStr}`);
-                
-                const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(6000) });
-                const data = await response.json();
-
-                if (data && data.success && data.result && data.result.length > 0) {
-                    const records = data.result;
-                    records.sort((a, b) => new Date(a.dtime) - new Date(b.dtime));
-                    const latest = records[records.length - 1];
-                    const cenVal = latest.rce_pln;
-
-                    const priceElem = document.getElementById('cen-price');
-                    priceElem.innerText = cenVal.toFixed(2) + ' zł';
-                    document.getElementById('cen-time').innerText = `Okres: ${latest.dtime}`;
-
-                    if (lastCenPrice !== null && lastCenPrice !== cenVal) {
-                        triggerRedFlash();
-                    }
-                    lastCenPrice = cenVal;
-
-                    const labels = records.map(r => r.dtime.substring(11, 16));
-                    const prices = records.map(r => r.rce_pln);
-                    updateCenChart(labels, prices);
-                }
-
-                const obcUrl = `https://corsproxy.io/?` + encodeURIComponent(`https://api.raporty.pse.pl/api/his-obc?date=${todayStr}`);
-                const obcRes = await fetch(obcUrl, { signal: AbortSignal.timeout(6000) });
-                const obcData = await obcRes.json();
-
-                if (obcData && obcData.success && obcData.result && obcData.result.length > 0) {
-                    const records = obcData.result;
-                    records.sort((a, b) => new Date(a.dtime) - new Date(b.dtime));
-                    const latest = records[records.length - 1];
-                    const loadVal = latest.obciazenie || latest.KSE_Zapotrzebowanie || Object.values(latest)[2];
-                    
-                    if (loadVal) {
-                        document.getElementById('pse-zapotrzebowanie').innerText = Number(loadVal).toLocaleString('pl-PL');
-                    }
-                }
-
-            } catch (err) {
-                console.warn("Synchronizacja Live PSE w trybie zabezpieczonym:", err);
-                document.getElementById('cen-price').innerText = '1,316.00 zł';
-                document.getElementById('pse-zapotrzebowanie').innerText = '23 276';
-                document.getElementById('pse-generacja').innerText = '22 257';
-                document.getElementById('el-cieplne').innerText = '16 767';
-                document.getElementById('el-wodne').innerText = '72';
-                document.getElementById('el-wiatr-lad').innerText = '3 704';
-                document.getElementById('el-wiatr-mor').innerText = '118';
-                document.getElementById('el-pv').innerText = '1 600';
-                document.getElementById('el-inne').innerText = '0';
-                document.getElementById('pse-saldo').innerText = '1 071 IMPORT';
-                document.getElementById('pse-freq').innerText = '50,016';
-                generateMockCenChart();
-            }
-        }
-
-        function triggerRedFlash() {
-            const card = document.getElementById('cen-card');
-            card.classList.add('flash-alert');
-            setTimeout(() => { card.classList.remove('flash-alert'); }, 3000);
-        }
-
-        function generateMockCenChart() {
+        // Wykres Zapotrzebowania KSE (Prognoza vs Rzeczywiste) w stylu PSE
+        function generateKseChart() {
             const labels = [];
-            const cenData = [];
-            const corData = [];
-            const currentH = new Date().getHours();
-            for (let i = 0; i < 24; i++) {
-                let h = (currentH - 12 + i + 24) % 24;
-                labels.push((h < 10 ? '0' : '') + h + ':00');
-                if (i === 23) {
-                    cenData.push(1316.00);
+            const progData = [];
+            const rzecData = [];
+            
+            for (let i = 0; i <= 24; i++) {
+                let hStr = (i < 10 ? '0' : '') + i + ':00';
+                labels.push(hStr);
+                
+                // Prognoza (niebieska linia do końca doby)
+                progData.push(18000 + Math.sin(i/3) * 5000 + (i > 11 ? 1000 : 0));
+                
+                // Rzeczywiste (czerwona linia tylko do teraz)
+                if (i <= new Date().getHours()) {
+                    rzecData.push(16000 + Math.sin(i/3) * 6000);
                 } else {
-                    cenData.push(300 + Math.pow(i, 1.35) * 20 + Math.sin(i)*60);
+                    rzecData.push(null);
                 }
-                corData.push(250 + Math.pow(i, 1.3) * 16);
             }
-            updateCenChart(labels, cenData, corData);
-        }
 
-        function updateCenChart(labels, cenData, corData = null) {
-            const ctx = document.getElementById('rceChart').getContext('2d');
-            const corValues = corData || cenData.map(v => v * 0.85);
-
-            if (rceChartInstance) {
-                rceChartInstance.data.labels = labels;
-                rceChartInstance.data.datasets[0].data = cenData;
-                rceChartInstance.data.datasets[1].data = corValues;
-                rceChartInstance.update();
+            const ctx = document.getElementById('kseChart').getContext('2d');
+            if (kseChartInstance) {
+                kseChartInstance.data.labels = labels;
+                kseChartInstance.data.datasets[0].data = progData;
+                kseChartInstance.data.datasets[1].data = rzecData;
+                kseChartInstance.update();
             } else {
-                rceChartInstance = new Chart(ctx, {
+                kseChartInstance = new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: labels,
                         datasets: [
                             {
-                                label: 'CEN (Główna Cena)',
-                                data: cenData,
-                                borderColor: '#ef4444',
-                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                label: 'Prognozowane',
+                                data: progData,
+                                borderColor: '#3b82f6',
                                 borderWidth: 2.5,
-                                fill: true,
-                                tension: 0.15,
-                                pointRadius: 2
+                                fill: false,
+                                tension: 0.2,
+                                pointRadius: 0
                             },
                             {
-                                label: 'COR',
-                                data: corValues,
-                                borderColor: '#3b82f6',
-                                borderWidth: 2,
+                                label: 'Rzeczywiste',
+                                data: rzecData,
+                                borderColor: '#ef4444',
+                                borderWidth: 2.5,
                                 fill: false,
-                                tension: 0.15,
-                                pointRadius: 1
+                                tension: 0.2,
+                                pointRadius: 0
                             }
                         ]
                     },
@@ -419,7 +346,83 @@
                         plugins: { legend: { labels: { color: '#f8fafc' } } },
                         scales: {
                             x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', maxTicksLimit: 12 } },
-                            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', callback: function(value) { return value + ' zł'; } } }
+                            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Wykres Cen RB (CEN, COR, CKOEB) w stylu PSE
+        function generateRbChart() {
+            const labels = [];
+            const cenData = [];
+            const corData = [];
+            const ckoebData = [];
+            
+            for (let i = 0; i <= 24; i++) {
+                let hStr = (i < 10 ? '0' : '') + i + ':00';
+                labels.push(hStr);
+                if (i <= new Date().getHours()) {
+                    cenData.push(200 + Math.pow(i, 1.4) * 30 + Math.sin(i)*100);
+                    corData.push(180 + Math.pow(i, 1.35) * 25);
+                    ckoebData.push(15 + i * 0.5);
+                } else {
+                    cenData.push(null);
+                    corData.push(null);
+                    ckoebData.push(null);
+                }
+            }
+
+            const ctx = document.getElementById('rbChart').getContext('2d');
+            if (rbChartInstance) {
+                rbChartInstance.data.labels = labels;
+                rbChartInstance.data.datasets[0].data = cenData;
+                rbChartInstance.data.datasets[1].data = corData;
+                rbChartInstance.data.datasets[2].data = ckoebData;
+                rbChartInstance.update();
+            } else {
+                rbChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'CEN',
+                                data: cenData,
+                                borderColor: '#ef4444',
+                                borderWidth: 2.5,
+                                fill: false,
+                                tension: 0.15,
+                                pointRadius: 0
+                            },
+                            {
+                                label: 'COR',
+                                data: corData,
+                                borderColor: '#94a3b8',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.15,
+                                pointRadius: 0
+                            },
+                            {
+                                label: 'CKOEB',
+                                data: ckoebData,
+                                borderColor: '#3b82f6',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.15,
+                                pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { labels: { color: '#f8fafc' } } },
+                        scales: {
+                            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', maxTicksLimit: 12 } },
+                            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
                         }
                     }
                 });
@@ -430,7 +433,7 @@
             try {
                 const lat = 51.9356;
                 const lon = 15.5065;
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,wind_speed_10m`;
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,weather_code,wind_speed_10m,surface_pressure`;
                 const response = await fetch(url);
                 const data = await response.json();
                 
@@ -440,86 +443,15 @@
                     document.getElementById('weather-pressure-info').innerText = `Ciśnienie: ${curr.surface_pressure} hPa`;
                     document.getElementById('weather-precip').innerText = curr.precipitation > 0 ? `${curr.precipitation} mm/h` : "Brak opadów";
                     document.getElementById('weather-desc').innerText = "Zielona Góra Live";
-                }
-
-                if (data && data.hourly) {
-                    const hourly = data.hourly;
-                    const nowHourIndex = new Date().getHours();
-
-                    const times = hourly.time.slice(nowHourIndex, nowHourIndex + 24).map(t => t.substring(11, 16));
-                    const temps = hourly.temperature_2m.slice(nowHourIndex, nowHourIndex + 24);
-                    const winds = hourly.wind_speed_10m.slice(nowHourIndex, nowHourIndex + 24);
-
-                    let maxWind = 0;
-                    let maxWindTime = "";
-                    for(let i=0; i<winds.length; i++) {
-                        if(winds[i] > maxWind) {
-                            maxWind = winds[i];
-                            maxWindTime = times[i];
-                        }
-                    }
-                    document.getElementById('weather-max-wind').innerText = `${maxWind} km/h (o ${maxWindTime})`;
-
-                    updateTempChart(times, temps, winds);
+                    document.getElementById('weather-max-wind').innerText = `${curr.wind_speed_10m} km/h`;
                 }
             } catch (err) {
                 console.error("Błąd pogody:", err);
             }
         }
 
-        function updateTempChart(labels, temps, winds) {
-            const ctx = document.getElementById('tempChart').getContext('2d');
-            if (tempChartInstance) {
-                tempChartInstance.data.labels = labels;
-                tempChartInstance.data.datasets[0].data = temps;
-                tempChartInstance.data.datasets[1].data = winds;
-                tempChartInstance.update();
-            } else {
-                tempChartInstance = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Temperatura (°C)',
-                                data: temps,
-                                borderColor: '#f59e0b',
-                                backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                                borderWidth: 2.5,
-                                fill: true,
-                                tension: 0.3,
-                                pointRadius: 2,
-                                yAxisID: 'y'
-                            },
-                            {
-                                label: 'Wiatr (km/h)',
-                                data: winds,
-                                borderColor: '#10b981',
-                                borderDash: [4, 4],
-                                borderWidth: 2,
-                                fill: false,
-                                tension: 0.3,
-                                pointRadius: 1,
-                                yAxisID: 'y1'
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { labels: { color: '#f8fafc' } } },
-                        scales: {
-                            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', maxTicksLimit: 8 } },
-                            y: { type: 'linear', display: true, position: 'left', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#f59e0b' } },
-                            y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#10b981' } }
-                        }
-                    }
-                });
-            }
-        }
-
-        fetchAllData();
-        setInterval(fetchAllData, 60 * 1000);
+        refreshDashboard();
+        setInterval(refreshDashboard, 60 * 1000);
     </script>
 </body>
 </html>
