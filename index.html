@@ -33,46 +33,52 @@
         }
         h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
         .clock-box { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 700; color: var(--accent-blue); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; margin-bottom: 24px; }
         .card {
             background: var(--card-bg); border: 1px solid var(--border-color);
             border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column;
         }
         .card h2 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .full { grid-column: 1 / -1; }
+        .card .status-bar { margin-top: auto; }
 
-        .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 2.8rem; font-weight: 800; margin: 10px 0; letter-spacing: -1px; }
-        .sub-info { font-size: 0.85rem; color: var(--text-muted); margin-top: 8px; }
+        .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 2.8rem; font-weight: 800; margin: 6px 0; letter-spacing: -1px; }
+        .sub-info { font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; }
+        .period {
+            display: inline-block; margin-top: 4px; padding: 4px 10px; border-radius: 6px;
+            background: rgba(239,68,68,0.12); color: #fca5a5;
+            font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 0.95rem;
+        }
+        .period.blue { background: rgba(59,130,246,0.14); color: #93c5fd; }
 
         .pse-table { width: 100%; margin-top: 8px; border-collapse: collapse; }
         .pse-table tr { border-bottom: 1px solid rgba(255,255,255,0.06); }
-        .pse-table td { padding: 7px 4px; font-size: 0.9rem; }
+        .pse-table td { padding: 8px 4px; font-size: 0.9rem; }
         .pse-table td.label { color: var(--text-muted); font-weight: 600; }
-        .pse-table td.sub-label { color: var(--text-muted); padding-left: 15px; font-size: 0.85rem; }
         .pse-table td.val { text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--text-main); }
 
         .weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 12px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
         .weather-item { background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 8px; }
-        .weather-item span { display: block; font-size: 0.75rem; color: var(--text-muted); }
-        .weather-item strong { font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; }
-        .weather-item small { display: block; font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+        .weather-item span { display: block; font-size: 0.72rem; color: var(--text-muted); }
+        .weather-item strong { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
 
-        .wx-top { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+        .wx-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+        .wx-top .value-huge { font-size: 2.4rem; }
 
-        .hourly-title { font-size: 0.8rem; color: var(--text-muted); margin: 18px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .hourly { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; }
+        .hourly-title { font-size: 0.72rem; color: var(--text-muted); margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .hourly { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; }
         .hour-cell {
-            flex: 0 0 82px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 8px; padding: 8px 6px; text-align: center; font-size: 0.78rem;
+            flex: 0 0 58px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px; padding: 6px 4px; text-align: center; font-size: 0.72rem;
         }
         .hour-cell.now { border-color: var(--accent-orange); }
         .hour-cell .h { color: var(--text-muted); font-weight: 600; }
-        .hour-cell .ic { font-size: 1.3rem; margin: 4px 0; }
-        .hour-cell .t { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 0.95rem; }
-        .hour-cell .p { margin-top: 4px; min-height: 1.2em; color: #60a5fa; }
+        .hour-cell .ic { font-size: 1.1rem; margin: 2px 0; }
+        .hour-cell .t { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 0.85rem; }
+        .hour-cell .p { margin-top: 2px; min-height: 1.1em; color: #60a5fa; }
         .hour-cell .p.snow { color: #e0f2fe; }
-        .hour-cell .w { margin-top: 4px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); }
+        .hour-cell .w { margin-top: 2px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); }
         .hour-cell .w.mid { color: var(--accent-orange); }
         .hour-cell .w.high { color: var(--accent-red); font-weight: 700; }
 
@@ -81,7 +87,7 @@
 
         .status-bar {
             display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
-            font-size: 0.8rem; color: var(--text-muted);
+            font-size: 0.78rem; color: var(--text-muted);
             border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 10px;
         }
         .pulse { display: inline-block; width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; animation: pulse 2s infinite; margin-right: 6px; }
@@ -101,7 +107,7 @@
     <header>
         <div>
             <h1>⚡ Panel Nastawni (EC) - PSE Live</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB (CEN, COR, CKOEB) z API PSE + pogoda Zielona Góra (IMGW-PIB, Open-Meteo)</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB i dane KSE z API PSE (odświeżane co 30 s) + pogoda Zielona Góra</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div id="clock" class="clock-box">--:--:--</div>
@@ -113,6 +119,7 @@
         <!-- CEN -->
         <div class="card" style="border: 2px solid var(--accent-red);">
             <h2>Ceny na Rynku Bilansującym (RB)</h2>
+            <div><span id="cen-period" class="period">Okres: --</span></div>
             <div id="cen-price" class="value-huge" style="color: var(--accent-red);">--</div>
             <div class="sub-info" id="cen-sub">CEN [zł/MWh]</div>
 
@@ -127,64 +134,41 @@
             </div>
         </div>
 
-        <!-- BILANS KSE (dane ręczne) -->
+        <!-- KSE (live z API PSE: his-wlk-cal) -->
         <div class="card" style="border: 2px solid var(--accent-blue);">
             <h2>Bilans i Generacja w KSE</h2>
+            <div><span id="kse-period" class="period blue">Okres: --</span></div>
             <table class="pse-table">
-                <tr><td class="label">ZAPOTRZEBOWANIE [MW]</td><td class="val" style="font-size: 1.15rem; color: var(--accent-blue);">23 276</td></tr>
-                <tr><td class="label">GENERACJA [MW]</td><td class="val" style="font-size: 1.15rem; color: var(--accent-green);">22 257</td></tr>
-                <tr><td class="sub-label">el. cieplne</td><td class="val">16 767</td></tr>
-                <tr><td class="sub-label">el. wodne</td><td class="val">72</td></tr>
-                <tr><td class="sub-label">el. wiatrowe lądowe</td><td class="val">3 704</td></tr>
-                <tr><td class="sub-label">el. wiatrowe morskie</td><td class="val">118</td></tr>
-                <tr><td class="sub-label">el. fotowoltaiczne</td><td class="val">1 600</td></tr>
-                <tr><td class="sub-label">el. inne odnawialne</td><td class="val">0</td></tr>
-                <tr><td class="label">SALDO WYMIANY CAŁKOWITEJ [MW]</td><td class="val" style="color: var(--accent-green);">1 071 IMPORT</td></tr>
-                <tr><td class="label">CZĘSTOTLIWOŚĆ [Hz]</td><td class="val" style="color: var(--accent-orange);">50,016</td></tr>
+                <tr><td class="label">ZAPOTRZEBOWANIE [MW]</td><td class="val" id="kse-demand" style="font-size: 1.15rem; color: var(--accent-blue);">--</td></tr>
+                <tr><td class="label">JEDNOSTKI GRAFIKOWE (JG) [MW]</td><td class="val" id="kse-jg" style="font-size: 1.15rem; color: var(--accent-green);">--</td></tr>
+                <tr><td class="label">el. wiatrowe [MW]</td><td class="val" id="kse-wi">--</td></tr>
+                <tr><td class="label">el. fotowoltaiczne [MW]</td><td class="val" id="kse-pv">--</td></tr>
+                <tr><td class="label">SALDO WYMIANY [MW]</td><td class="val" id="kse-swm">--</td></tr>
             </table>
             <div class="status-bar">
-                <span>Wartości wpisane ręcznie</span>
-                <span>Nie aktualizują się</span>
+                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">Portal PSE Live</span></span>
+                <span id="kse-update-time">--</span>
             </div>
         </div>
 
-        <!-- POGODA -->
-        <div class="card full">
+        <!-- POGODA (kompaktowa) -->
+        <div class="card">
             <h2>Pogoda (Zielona Góra)</h2>
             <div class="wx-top">
-                <div id="weather-temp" class="value-huge" style="font-size: 2.8rem;">--°C</div>
-                <div id="weather-desc" style="font-size: 0.95rem; color: var(--text-muted);">Pobieranie...</div>
+                <div id="weather-temp" class="value-huge">--°C</div>
+                <div id="weather-desc" style="font-size: 0.9rem; color: var(--text-muted);">Pobieranie...</div>
             </div>
 
             <div class="metrics-grid">
-                <div class="weather-item">
-                    <span>Ciśnienie [hPa]</span>
-                    <strong id="wx-pressure">--</strong>
-                    <small id="wx-pressure-range">dziś: --</small>
-                </div>
-                <div class="weather-item">
-                    <span>Wilgotność</span>
-                    <strong id="wx-humidity">--</strong>
-                </div>
-                <div class="weather-item">
-                    <span>Punkt rosy</span>
-                    <strong id="wx-dew">--</strong>
-                </div>
-                <div class="weather-item">
-                    <span>Wiatr (średni)</span>
-                    <strong id="wx-wind">--</strong>
-                </div>
-                <div class="weather-item">
-                    <span>Max wiatr (poryw)</span>
-                    <strong id="weather-max-wind" style="color: var(--accent-orange);">--</strong>
-                </div>
-                <div class="weather-item">
-                    <span>Opady / Stan</span>
-                    <strong id="weather-precip">--</strong>
-                </div>
+                <div class="weather-item"><span>Ciśnienie [hPa]</span><strong id="wx-pressure">--</strong></div>
+                <div class="weather-item"><span>Wilgotność</span><strong id="wx-humidity">--</strong></div>
+                <div class="weather-item"><span>Punkt rosy</span><strong id="wx-dew">--</strong></div>
+                <div class="weather-item"><span>Wiatr (poryw)</span><strong id="wx-wind" style="color: var(--accent-orange);">--</strong></div>
+                <div class="weather-item"><span>Opady</span><strong id="weather-precip">--</strong></div>
+                <div class="weather-item"><span>Ciśn. dziś min–max</span><strong id="wx-pressure-range">--</strong></div>
             </div>
 
-            <div class="hourly-title">Najbliższe 24 godziny: temperatura, opady, wiatr (w nawiasie porywy, km/h)</div>
+            <div class="hourly-title">Najbliższe godziny: temp. · opad · wiatr (poryw) km/h</div>
             <div id="hourly" class="hourly"><span class="sub-info">Pobieranie prognozy...</span></div>
 
             <div class="status-bar">
@@ -210,25 +194,38 @@
         const IMGW_URL = 'https://danepubliczne.imgw.pl/api/data/synop/id/12400'; // stacja synoptyczna Zielona Góra
         const TZ = 'Europe/Warsaw';
         const LAT = 51.9356, LON = 15.5065;
+        const PSE_REFRESH_MS = 30 * 1000;
+        // Znak salda wymiany w his-wlk-cal: true = wartość dodatnia oznacza IMPORT. Jeśli etykieta będzie odwrotna niż na pse.pl, zmień na false.
+        const SWM_POSITIVE_IS_IMPORT = true;
 
         let rbChart = null;
         let tempChart = null;
 
+        const $ = id => document.getElementById(id);
+        const pad = n => String(n).padStart(2, '0');
+
         setInterval(() => {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString('pl-PL', { timeZone: TZ });
+            $('clock').innerText = new Date().toLocaleTimeString('pl-PL', { timeZone: TZ });
         }, 1000);
 
         // ---------- Pomocnicze ----------
-        const $ = id => document.getElementById(id);
         function warsawDate(offsetDays = 0) {
             return new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(new Date(Date.now() + offsetDays * 86400000));
         }
+        function nowStr() { return new Date().toLocaleTimeString('pl-PL', { timeZone: TZ }); }
         function fmt(v, d = 2) {
             return (v === null || v === undefined || isNaN(v)) ? '--'
                 : Number(v).toLocaleString('pl-PL', { minimumFractionDigits: d, maximumFractionDigits: d });
         }
         function hhmm(dtime) { return String(dtime).slice(11, 16); }
         function num(v) { return (v === null || v === undefined || v === '') ? null : Number(v); }
+        // dtime oznacza koniec okresu 15-min, np. 11:45 => okres 11:30–11:45
+        function periodLabel(dtime) {
+            const end = hhmm(dtime);
+            const [h, m] = end.split(':').map(Number);
+            let s = h * 60 + m - 15; if (s < 0) s += 1440;
+            return `${pad(Math.floor(s / 60))}:${pad(s % 60)}–${end}`;
+        }
 
         async function getJson(url, ms = 15000) {
             const c = new AbortController();
@@ -240,14 +237,11 @@
             } finally { clearTimeout(t); }
         }
         function explain(err) {
-            // TypeError "Failed to fetch" = blokada sieci / CORS / brak internetu
-            return (err && err.name === 'TypeError')
-                ? 'brak dostępu do sieci (blokada CORS/CSP lub brak internetu)'
+            return (err && err.name === 'TypeError') ? 'brak dostępu do sieci (CORS/CSP lub brak internetu)'
                 : (err && err.name === 'AbortError') ? 'przekroczono czas oczekiwania'
                 : String(err && err.message || err);
         }
 
-        // ---------- PSE: ceny RB ----------
         async function pseFetch(endpoint, businessDate) {
             let url = PSE_API + endpoint + '?$filter=' + encodeURIComponent(`business_date eq '${businessDate}'`);
             const rows = [];
@@ -259,6 +253,7 @@
             return rows;
         }
 
+        // ---------- PSE: ceny RB ----------
         function mergeRb(costRows, fcstRows) {
             const map = new Map();
             const key = r => r.dtime ?? r.udtczas_oreb ?? r.udtczas ?? r.period;
@@ -270,12 +265,8 @@
                 o.pub = r.publication_ts || r.source_datetime || o.pub;
                 map.set(k, o);
             };
-            fcstRows.forEach(r => upsert(r, {
-                cen: r.cen_fcst ?? r.cen_prog, cor: r.cor_fcst ?? r.cor_pp_prog, ckoeb: r.ckoeb_fcst ?? r.ckoeb_prog
-            }, 1));
-            costRows.forEach(r => upsert(r, {
-                cen: r.cen_cost ?? r.cen_rozl, cor: r.cor_pp_cost ?? r.cor_cost ?? r.cor_pp_rozl, ckoeb: r.ckoeb_cost ?? r.ckoeb_rozl
-            }, 2));
+            fcstRows.forEach(r => upsert(r, { cen: r.cen_fcst ?? r.cen_prog, cor: r.cor_fcst ?? r.cor_pp_prog, ckoeb: r.ckoeb_fcst ?? r.ckoeb_prog }, 1));
+            costRows.forEach(r => upsert(r, { cen: r.cen_cost ?? r.cen_rozl, cor: r.cor_pp_cost ?? r.cor_cost ?? r.cor_pp_rozl, ckoeb: r.ckoeb_cost ?? r.ckoeb_rozl }, 2));
             return [...map.values()].sort((a, b) => String(a.dtime).localeCompare(String(b.dtime)));
         }
 
@@ -287,7 +278,6 @@
             };
             let [cost, fcst] = await tryList(['price-cost', 'price-fcst']);
             if (!cost.length && !fcst.length) {
-                // starsze nazwy endpointów (API v1)
                 const [a, b, c, d] = await tryList(['crb-rozl', 'cor-rozl', 'crb-prog', 'cor-prog']);
                 cost = [...a, ...b]; fcst = [...c, ...d];
             }
@@ -296,13 +286,11 @@
 
         async function loadRbPrices() {
             const log = [];
-            for (const date of [warsawDate(), warsawDate(-1)]) { // po północy dane nowej doby mogą jeszcze nie istnieć
+            for (const date of [warsawDate(), warsawDate(-1)]) {
                 const series = await loadRbForDate(date, log);
                 if (series.some(r => r.cen !== null)) return { series, date };
             }
-            const e = new Error('Brak danych RB (' + log.join('; ') + ')');
-            e.details = log;
-            throw e;
+            throw new Error('Brak danych RB (' + log.join('; ') + ')');
         }
 
         function renderRbCard(series, date) {
@@ -312,8 +300,9 @@
             cenEl.style.color = (last.cen !== null && last.cen < 0) ? 'var(--accent-green)' : 'var(--accent-red)';
             $('cor-price').innerText = fmt(last.cor);
             $('ckoeb-price').innerText = fmt(last.ckoeb);
-            $('cen-sub').innerText = `CEN [zł/MWh] - doba ${date}, okres do ${hhmm(last.dtime)}`;
-            $('cen-update-time').innerText = last.pub ? 'Publikacja: ' + String(last.pub).replace('T', ' ').slice(0, 16) : '';
+            $('cen-period').innerText = `⏱ Okres: ${periodLabel(last.dtime)} (15 min)`;
+            $('cen-sub').innerText = `CEN [zł/MWh] - doba ${date}`;
+            $('cen-update-time').innerText = (last.pub ? 'Publ. ' + String(last.pub).replace('T', ' ').slice(11, 16) + ' · ' : '') + 'sprawdzono ' + nowStr();
             $('cen-pulse').classList.remove('err');
             $('cen-status').classList.remove('err-text');
             $('cen-status').innerText = 'Portal PSE Live';
@@ -363,6 +352,53 @@
             } catch (err) { renderRbError(err); }
         }
 
+        // ---------- PSE: KSE (his-wlk-cal) ----------
+        async function loadKse() {
+            for (const date of [warsawDate(), warsawDate(-1)]) {
+                const rows = (await pseFetch('his-wlk-cal', date))
+                    .filter(r => num(r.demand ?? r.zapotrzebowanie) !== null)
+                    .sort((a, b) => String(a.dtime ?? a.udtczas).localeCompare(String(b.dtime ?? b.udtczas)));
+                if (rows.length) return rows[rows.length - 1];
+            }
+            throw new Error('Brak danych his-wlk-cal');
+        }
+
+        function renderKse(r) {
+            const mw = v => num(v) === null ? '--' : Math.round(num(v)).toLocaleString('pl-PL');
+            const swmParts = [num(r.swm_p ?? r.swm_r), num(r.swm_np ?? r.swm_nr)].filter(v => v !== null);
+            const swm = swmParts.length ? swmParts.reduce((a, b) => a + b, 0) : null;
+            const dt = r.dtime ?? r.udtczas;
+
+            $('kse-period').innerText = `⏱ Okres: ${periodLabel(dt)} (15 min)`;
+            $('kse-demand').innerText = mw(r.demand ?? r.zapotrzebowanie);
+            $('kse-jg').innerText = mw(r.jg);
+            $('kse-wi').innerText = mw(r.wi);
+            $('kse-pv').innerText = mw(r.pv);
+
+            const swmEl = $('kse-swm');
+            if (swm === null) { swmEl.innerText = '--'; swmEl.style.color = ''; }
+            else {
+                const isImport = SWM_POSITIVE_IS_IMPORT ? swm > 0 : swm < 0;
+                swmEl.innerText = `${Math.abs(Math.round(swm)).toLocaleString('pl-PL')} ${isImport ? 'IMPORT' : 'EKSPORT'}`;
+                swmEl.style.color = isImport ? 'var(--accent-green)' : 'var(--accent-orange)';
+            }
+            const pub = r.publication_ts ? String(r.publication_ts).replace('T', ' ').slice(11, 16) : null;
+            $('kse-update-time').innerText = (pub ? 'Publ. ' + pub + ' · ' : '') + 'sprawdzono ' + nowStr();
+            $('kse-pulse').classList.remove('err');
+            $('kse-status').classList.remove('err-text');
+            $('kse-status').innerText = 'Portal PSE Live';
+        }
+
+        async function refreshKse() {
+            try { renderKse(await loadKse()); }
+            catch (err) {
+                console.error('Błąd KSE:', err);
+                $('kse-pulse').classList.add('err');
+                $('kse-status').classList.add('err-text');
+                $('kse-status').innerText = 'Błąd API PSE: ' + explain(err);
+            }
+        }
+
         // ---------- Pogoda ----------
         const WMO = {
             0: ['Bezchmurnie', '☀️'], 1: ['Prawie bezchmurnie', '🌤️'], 2: ['Częściowe zachmurzenie', '⛅'], 3: ['Pochmurno', '☁️'],
@@ -375,6 +411,7 @@
             95: ['Burza', '⛈️'], 96: ['Burza z gradem', '⛈️'], 99: ['Burza z gradem', '⛈️']
         };
         const wmo = c => WMO[c] || ['—', '·'];
+        const HOURLY_CELLS = 12;
 
         function compass(deg) {
             if (deg === null || deg === undefined || isNaN(deg)) return '';
@@ -386,18 +423,21 @@
             return 243.12 * g / (17.62 - g);
         }
 
-        // Pomiar z IMGW-PIB (synop, stacja Zielona Góra)
+        // IMGW podaje godzinę pomiaru w UTC - przeliczamy na czas lokalny
+        function imgwLocalTime(o) {
+            const [y, m, d] = String(o.data_pomiaru).split('-').map(Number);
+            const dt = new Date(Date.UTC(y, m - 1, d, Number(o.godzina_pomiaru)));
+            return new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(dt);
+        }
+
         async function loadImgw() {
             const d = await getJson(IMGW_URL);
             const o = Array.isArray(d) ? d[0] : d;
             const t = num(o.temperatura), rh = num(o.wilgotnosc_wzgledna);
             return {
-                temp: t, rh,
-                pressure: num(o.cisnienie),
+                temp: t, rh, pressure: num(o.cisnienie),
                 windMs: num(o.predkosc_wiatru), windDir: num(o.kierunek_wiatru),
-                precip: num(o.suma_opadu),
-                dew: dewPoint(t, rh),
-                when: `${o.data_pomiaru} ${String(o.godzina_pomiaru).padStart(2, '0')}:00`
+                precip: num(o.suma_opadu), dew: dewPoint(t, rh), when: imgwLocalTime(o)
             };
         }
 
@@ -411,27 +451,26 @@
         }
 
         function renderHourly(h, curTime) {
-            const box = $('hourly');
             let start = h.time.findIndex(t => t.slice(0, 13) === String(curTime).slice(0, 13));
             if (start < 0) start = 0;
-            const end = Math.min(start + 24, h.time.length);
+            const end = Math.min(start + HOURLY_CELLS, h.time.length);
             let html = '';
             for (let i = start; i < end; i++) {
                 const snow = h.snowfall[i] || 0, prec = h.precipitation[i] || 0;
                 let p = '—', pc = 'p';
-                if (snow > 0) { p = `❄ ${fmt(snow, 1)} cm`; pc = 'p snow'; }
-                else if (prec > 0) { p = `🌧 ${fmt(prec, 1)} mm`; }
-                const ws = Math.round(h.wind_speed_10m[i]), g = Math.round(h.wind_gusts_10m[i]);
+                if (snow > 0) { p = `❄${fmt(snow, 1)}`; pc = 'p snow'; }
+                else if (prec > 0) { p = `🌧${fmt(prec, 1)}`; }
+                const g = Math.round(h.wind_gusts_10m[i]);
                 const wc = g >= 60 ? 'w high' : g >= 40 ? 'w mid' : 'w';
-                html += `<div class="hour-cell${i === start ? ' now' : ''}">
+                html += `<div class="hour-cell${i === start ? ' now' : ''}" title="${wmo(h.weather_code[i])[0]}">
                     <div class="h">${h.time[i].slice(11, 16)}</div>
-                    <div class="ic" title="${wmo(h.weather_code[i])[0]}">${wmo(h.weather_code[i])[1]}</div>
+                    <div class="ic">${wmo(h.weather_code[i])[1]}</div>
                     <div class="t">${Math.round(h.temperature_2m[i])}°</div>
                     <div class="${pc}">${p}</div>
-                    <div class="${wc}">${ws} (${g})</div>
+                    <div class="${wc}">${Math.round(h.wind_speed_10m[i])} (${g})</div>
                 </div>`;
             }
-            box.innerHTML = html;
+            $('hourly').innerHTML = html;
         }
 
         function renderTempChart(h, curTime) {
@@ -464,10 +503,7 @@
                             borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.12)', borderWidth: 2.5, fill: true, tension: 0.3,
                             pointBackgroundColor: colors, pointRadius: radius, segment: seg, order: 1
                         },
-                        {
-                            type: 'bar', label: 'Opady [mm]', data: rain, yAxisID: 'y1',
-                            backgroundColor: 'rgba(96,165,250,0.55)', order: 2
-                        }
+                        { type: 'bar', label: 'Opady [mm]', data: rain, yAxisID: 'y1', backgroundColor: 'rgba(96,165,250,0.55)', order: 2 }
                     ]
                 },
                 options: {
@@ -484,8 +520,7 @@
         }
 
         function setStatus(id, name, ok, msg) {
-            const el = $(id);
-            el.innerHTML = `<span class="pulse${ok ? '' : ' err'}"></span>${name}: ${ok ? msg : '<span class="err-text">' + msg + '</span>'}`;
+            $(id).innerHTML = `<span class="pulse${ok ? '' : ' err'}"></span>${name}: ${ok ? msg : '<span class="err-text">' + msg + '</span>'}`;
         }
 
         async function refreshWeather() {
@@ -499,14 +534,12 @@
             else { console.error('Open-Meteo:', omR.reason); setStatus('om-status', 'Open-Meteo', false, explain(omR.reason)); }
 
             const c = om ? om.current : null;
-
-            // Wartości bieżące: pomiar IMGW ma pierwszeństwo, Open-Meteo jako uzupełnienie
             const temp = imgw?.temp ?? c?.temperature_2m ?? null;
             const rh = imgw?.rh ?? c?.relative_humidity_2m ?? null;
             const dew = imgw?.dew ?? c?.dew_point_2m ?? null;
             const pres = imgw?.pressure ?? c?.pressure_msl ?? null;
-            const windKmh = imgw?.windMs != null ? imgw.windMs * 3.6 : (c?.wind_speed_10m ?? null);
             const windDir = imgw?.windDir ?? c?.wind_direction_10m ?? null;
+            const windKmh = imgw?.windMs != null ? imgw.windMs * 3.6 : (c?.wind_speed_10m ?? null);
             const precip = imgw?.precip ?? c?.precipitation ?? null;
 
             $('weather-temp').innerText = temp !== null ? fmt(temp, 1) + '°C' : '--°C';
@@ -514,15 +547,15 @@
             $('wx-pressure').innerText = pres !== null ? fmt(pres, 1) : '--';
             $('wx-humidity').innerText = rh !== null ? Math.round(rh) + ' %' : '--';
             $('wx-dew').innerText = dew !== null ? fmt(dew, 1) + '°C' : '--';
-            $('wx-wind').innerText = windKmh !== null ? `${Math.round(windKmh)} km/h ${compass(windDir)}` : '--';
-            $('weather-max-wind').innerText = c ? Math.round(c.wind_gusts_10m) + ' km/h' : '--';
-            $('weather-precip').innerText = precip !== null ? (precip > 0 ? fmt(precip, 1) + ' mm' : 'Brak opadów') : '--';
+            $('wx-wind').innerText = windKmh !== null
+                ? `${Math.round(windKmh)}${c ? ' (' + Math.round(c.wind_gusts_10m) + ')' : ''} ${compass(windDir)}` : '--';
+            $('weather-precip').innerText = precip !== null ? (precip > 0 ? fmt(precip, 1) + ' mm' : 'Brak') : '--';
 
             if (om) {
                 const h = om.hourly;
                 const today = String(c.time).slice(0, 10);
                 const pr = h.pressure_msl.filter((_, i) => h.time[i].startsWith(today));
-                $('wx-pressure-range').innerText = pr.length ? `dziś: ${fmt(Math.min(...pr), 0)}–${fmt(Math.max(...pr), 0)}` : 'dziś: --';
+                $('wx-pressure-range').innerText = pr.length ? `${fmt(Math.min(...pr), 0)}–${fmt(Math.max(...pr), 0)}` : '--';
                 renderHourly(h, c.time);
                 renderTempChart(h, c.time);
             } else {
@@ -531,11 +564,11 @@
         }
 
         // ---------- Odświeżanie ----------
-        function refreshDashboard() { refreshRb(); refreshWeather(); }
+        function refreshDashboard() { refreshRb(); refreshKse(); refreshWeather(); }
 
         refreshDashboard();
-        setInterval(refreshRb, 60 * 1000);
-        setInterval(refreshWeather, 10 * 60 * 1000);
+        setInterval(() => { refreshRb(); refreshKse(); }, PSE_REFRESH_MS); // dane PSE: co 30 s
+        setInterval(refreshWeather, 10 * 60 * 1000);                       // pogoda: co 10 min
     </script>
 </body>
 </html>
