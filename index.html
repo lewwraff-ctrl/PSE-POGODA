@@ -170,7 +170,7 @@
             </div>
         </div>
 
-        <!-- KSE (Potrójne bramkowanie omijające CORS) -->
+        <!-- KSE -->
         <div class="card" style="border: 2px solid var(--accent-blue);">
             <h2>Bilans KSE na żywo</h2>
             <div class="kse-box" style="margin-top: 6px;">
@@ -194,7 +194,7 @@
                 </table>
             </div>
             <div class="status-bar">
-                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">Mapa KSE (Połączono)</span></span>
+                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">API (PV Index)</span></span>
                 <span id="kse-update-time">--</span>
             </div>
         </div>
@@ -214,7 +214,7 @@
                 <div class="weather-item"><span>Wiatr (poryw)</span><strong id="wx-wind" style="color: var(--accent-orange);">--</strong></div>
             </div>
 
-            <div class="hourly-title">Najbliższe 36 godzin (przewiń w prawo ➔)</div>
+            <div class="hourly-title">Najbliższe 36 godzin (przewiń ➔)</div>
             <div id="hourly" class="hourly"><span class="sub-info">Pobieranie prognozy...</span></div>
 
             <div class="status-bar">
@@ -451,76 +451,63 @@
             try { const { series, date } = await loadRbPrices(); renderRbCard(series, date); renderRbChart(series); } catch (err) { renderRbError(err); }
         }
 
-        // ---------- KSE: Mechanizm wielobramkowy (omijający CORS) do mapy PSE ----------
+        /* ---------- KSE: dane na żywo z PV Index ---------- */
         async function refreshKse() {
             try {
-                const targetUrl = 'https://www.pse.pl/transmissionMapService';
-                
-                // Lista 3 niezależnych darmowych serwerów proxy omijających CORS
-                const proxies = [
-                    'https://corsproxy.io/?' + encodeURIComponent(targetUrl),
-                    'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl),
-                    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(targetUrl)
+                const response = await fetch(
+                    'https://pvindex.pl/api/v1/stats/pse-system/current',
+                    { cache: 'no-store' }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`Błąd API: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                const demand = Number(data.demand);
+                const generation = Number(data.generation);
+                const frequency = Number(data.frequency);
+
+                // Suma przepływów na połączeniach transgranicznych
+                const flowKeys = [
+                    'flow_se', 'flow_de', 'flow_cz', 'flow_sk', 'flow_ua', 'flow_lt'
                 ];
-                
-                let j = null;
-                for (const proxy of proxies) {
-                    try {
-                        const res = await fetch(proxy, { cache: 'no-store' });
-                        if (!res.ok) continue;
-                        
-                        const data = await res.json();
-                        
-                        // AllOrigins zwraca dane jako string w polu contents, pozostałe zwracają czysty JSON
-                        if (data.contents) {
-                            try { j = JSON.parse(data.contents); } catch(e){}
-                        } else {
-                            j = data;
-                        }
-                        
-                        // Przerywamy pętlę, jeśli udało się wyciągnąć poprawne dane
-                        if (j && j.data && j.data.podsumowanie) break; 
-                    } catch (e) {
-                        console.warn('Proxy failed:', proxy);
-                    }
-                }
 
-                const s = j && j.data && j.data.podsumowanie;
-                if (!s) throw new Error('Wszystkie bramki proxy zablokowane');
+                const saldo = flowKeys.reduce((sum, key) => {
+                    const value = Number(data[key]);
+                    return sum + (Number.isFinite(value) ? value : 0);
+                }, 0);
 
-                // Konwersja formatu liczbowego z PSE ("23 000,50" na 23000.5)
-                function parsePSEVal(val) {
-                    if (val === null || val === undefined) return null;
-                    if (typeof val === 'number') return val;
-                    const clean = String(val).replace(/\s/g, '').replace(',', '.');
-                    const num = parseFloat(clean);
-                    return isNaN(num) ? null : num;
-                }
+                const setText = (id, value) => {
+                    const element = document.getElementById(id);
+                    if (element) element.textContent = value;
+                };
 
-                const demand = parsePSEVal(s.zapotrzebowanie);
-                const gen = parsePSEVal(s.generacja);
-                const freq = parsePSEVal(s.czestotliwosc);
-                
-                const saldoRow = (j.data.przesyly || []).find(p => String(p.id).toUpperCase() === 'SALDO');
-                const saldo = saldoRow ? parsePSEVal(saldoRow.wartosc) : null;
+                setText('kse-demand', Number.isFinite(demand) ? `${demand.toLocaleString('pl-PL')} MW` : '—');
+                setText('kse-gen', Number.isFinite(generation) ? `${generation.toLocaleString('pl-PL')} MW` : '—');
+                setText('kse-saldo', `${saldo > 0 ? '+' : ''}${saldo.toLocaleString('pl-PL')} MW`);
+                setText('kse-freq', Number.isFinite(frequency) ? `${frequency.toLocaleString('pl-PL', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} Hz` : '—');
 
-                $('kse-demand').innerText = demand !== null ? Math.round(demand).toLocaleString('pl-PL') + ' MW' : '--';
-                $('kse-gen').innerText = gen !== null ? Math.round(gen).toLocaleString('pl-PL') + ' MW' : '--';
-                $('kse-saldo').innerText = saldo !== null ? (saldo > 0 ? '+' : '') + Math.round(saldo).toLocaleString('pl-PL') + ' MW' : '--';
-                $('kse-freq').innerText = freq !== null ? freq.toFixed(3) + ' Hz' : '--';
-
+                // Aktualizacja statusu
                 $('kse-pulse').classList.remove('err');
                 $('kse-status').classList.remove('err-text');
-                $('kse-status').innerText = 'Połączono (Proxy)';
+                $('kse-status').innerText = 'API PV Index';
                 $('kse-update-time').innerText = 'sprawdzono ' + nowStr();
 
-            } catch (e) {
-                console.error('Błąd KSE:', e);
-                $('kse-demand').innerText = 'Błąd'; $('kse-gen').innerText = 'Błąd'; $('kse-saldo').innerText = '--'; $('kse-freq').innerText = '--';
-                $('kse-pulse').classList.add('err'); $('kse-status').classList.add('err-text'); $('kse-status').innerText = 'Brak odpowiedzi';
+            } catch (error) {
+                console.error('Nie udało się pobrać danych KSE:', error);
+                $('kse-demand').innerText = 'Błąd';
+                $('kse-gen').innerText = 'Błąd';
+                $('kse-saldo').innerText = '--';
+                $('kse-freq').innerText = '--';
+                $('kse-pulse').classList.add('err');
+                $('kse-status').classList.add('err-text');
+                $('kse-status').innerText = 'Błąd pobierania';
             }
         }
 
+        // ---------- Pogoda (Open-Meteo) ----------
         const WMO = {
             0: ['Bezchmurnie', '☀️'], 1: ['Prawie bezchmurnie', '🌤️'], 2: ['Częściowe zachmurzenie', '⛅'], 3: ['Pochmurno', '☁️'],
             45: ['Mgła', '🌫️'], 61: ['Lekki deszcz', '🌦️'], 63: ['Deszcz', '🌧️'], 71: ['Lekki śnieg', '🌨️'], 73: ['Śnieg', '❄️'], 95: ['Burza', '⛈️']
@@ -612,7 +599,7 @@
 
         refreshDashboard();
         setInterval(refreshRb, PSE_REFRESH_MS);
-        setInterval(refreshKse, 15 * 1000); 
+        setInterval(refreshKse, 15000);
         setInterval(refreshWeather, 10 * 60 * 1000);
     </script>
 </body>
