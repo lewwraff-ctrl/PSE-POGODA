@@ -25,6 +25,8 @@
             color: var(--text-main);
             padding: 20px;
             min-height: 100vh;
+            /* Domyślnie kursor normalny, chowanie sterowane przez JS */
+            cursor: default; 
         }
         header {
             display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
@@ -140,6 +142,7 @@
         }
         .threshold-info span { padding: 2px 4px; background: rgba(255,255,255,0.03); border-radius: 4px; }
 
+        /* Tryb pełnoekranowy (Tylko kafelek, jeśli użyty przycisk, dla F11 działa globalnie) */
         #cen-card:fullscreen, #cen-card:-webkit-full-screen { background: var(--card-bg); padding: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100vw; height: 100vh; }
         #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: 14vw !important; margin: 20px 0; }
         #cen-card:fullscreen h2, #cen-card:-webkit-full-screen h2 { font-size: 2.2rem !important; }
@@ -152,7 +155,7 @@
     <header>
         <div>
             <h1>⚡ PSE + Pogoda</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB i Bilans KSE z PSE + pogoda Open-Meteo (Zielona Góra)</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB i Bilans KSE z PSE + pogoda Open-Meteo (Zielona Góra) | Klawisz F11 = Pełny Ekran</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div style="text-align: right;">
@@ -169,7 +172,7 @@
         <div class="card" id="cen-card" style="border: 2px solid var(--border-color);">
             <h2>
                 <span>Ceny na Rynku Bilansującym (RB)</span>
-                <button class="secondary" onclick="toggleFullscreen()" style="padding: 6px 12px; font-size: 0.8rem;">📺 Tryb Nastawni (Full)</button>
+                <button class="secondary" onclick="toggleCenFullscreen()" style="padding: 6px 12px; font-size: 0.8rem;">📺 Powiększ tylko ten panel</button>
             </h2>
             <div><span id="cen-period" class="period">Okres: --</span></div>
             <div id="cen-price" class="value-huge">--</div>
@@ -282,6 +285,37 @@
         const $ = id => document.getElementById(id);
         const pad = n => String(n).padStart(2, '0');
 
+        /* ---------- PAKIET NASTAWNI 24/7 ---------- */
+
+        // 1. Znikający kursor myszy (po 3 sekundach bezruchu)
+        let mouseTimer;
+        document.addEventListener('mousemove', () => {
+            document.body.style.cursor = 'default';
+            clearTimeout(mouseTimer);
+            mouseTimer = setTimeout(() => { document.body.style.cursor = 'none'; }, 3000);
+        });
+
+        // 2. Klawisz F11 - Pełny ekran dla całego panelu
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F11') {
+                e.preventDefault(); // Blokujemy domyślne zachowanie przeglądarki
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => console.log(`Błąd pełnego ekranu: ${err.message}`));
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        });
+
+        // Przycisk "Powiększ tylko ten panel" dla samego kafelka CEN
+        function toggleCenFullscreen() {
+            const elem = $('cen-card');
+            if (!document.fullscreenElement) {
+                elem.requestFullscreen().catch(err => alert(`Błąd: ${err.message}`));
+            } else document.exitFullscreen();
+        }
+
+        // Obsługa wyciszenia dźwięku
         function updateSoundButton() {
             const btn = $('sound-toggle-btn');
             if (soundMuted) {
@@ -301,18 +335,18 @@
             if (soundMuted && 'speechSynthesis' in window) window.speechSynthesis.cancel();
         }
 
-        function toggleFullscreen() {
-            const elem = $('cen-card');
-            if (!document.fullscreenElement) {
-                elem.requestFullscreen().catch(err => alert(`Błąd: ${err.message}`));
-            } else document.exitFullscreen();
-        }
-
-        // Zegarek i data
+        // Zegarek, Data oraz 3. Nocny Twardy Reset (03:00)
         setInterval(() => { 
             const now = new Date();
+            
+            // Formatowanie czasu i daty
             $('clock').innerText = now.toLocaleTimeString('pl-PL', { timeZone: TZ }); 
             $('date-box').innerText = now.toLocaleDateString('pl-PL', { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit', timeZone: TZ });
+            
+            // Twardy reset równo o 03:00:00 (zapobiega wyciekom pamięci z wykresów po wielu dniach pracy)
+            if (now.getHours() === 3 && now.getMinutes() === 0 && now.getSeconds() === 0) {
+                window.location.reload(true);
+            }
         }, 1000);
 
         function warsawDate(offsetDays = 0) { return new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(new Date(Date.now() + offsetDays * 86400000)); }
@@ -400,6 +434,7 @@
             document.title = 'PSE + Pogoda';
         }
 
+        // ---------- LOGIKA PEŁNYCH PROGÓW ----------
         function checkThresholdsAndAlert(price, period) {
             const card = $('cen-card');
             card.className = 'card'; 
@@ -516,7 +551,7 @@
         /* ---------- KSE: dane na żywo z PV Index ---------- */
         async function refreshKse() {
             try {
-                const response = await fetch('https://pse-kse-proxy.lewwraff.workers.dev/', { cache: 'no-store' });
+                const response = await fetch('https://pvindex.pl/api/v1/stats/pse-system/current', { cache: 'no-store' });
                 if (!response.ok) throw new Error(`Błąd API: ${response.status}`);
                 const data = await response.json();
 
