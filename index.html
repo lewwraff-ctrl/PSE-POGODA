@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -73,7 +74,7 @@
         .card h2 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
         .card .status-bar { margin-top: auto; }
 
-        .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 4rem; font-weight: 800; margin: 10px 0; letter-spacing: -1px; white-space: nowrap; transition: color 0.3s; }
+        .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 3.8rem; font-weight: 800; margin: 10px 0; letter-spacing: -1px; white-space: nowrap; transition: color 0.3s; }
         .sub-info { font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; }
         .period {
             display: inline-block; margin-top: 4px; padding: 6px 12px; border-radius: 6px;
@@ -181,7 +182,7 @@
     </header>
 
     <div class="grid">
-        <!-- CEN -->
+        <!-- CEN Z WBUDOWANYM DUŻYM WYKRESEM -->
         <div class="card" id="cen-card" style="border: 2px solid var(--border-color);">
             <h2>
                 <span>Ceny na Rynku Bilansującym (RB)</span>
@@ -213,6 +214,7 @@
                 <span style="color: #ec4899;">&gt;5k</span>
             </div>
 
+            <!-- GŁÓWNY WYKRES CEN RB W ŚRODKU KAFELKA -->
             <div class="rb-chart-box">
                 <canvas id="rbChart"></canvas>
             </div>
@@ -247,7 +249,7 @@
                 </table>
             </div>
             <div class="status-bar">
-                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">Wczytywanie...</span></span>
+                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">Proxy: lewwraff.workers.dev</span></span>
                 <span id="kse-update-time">--</span>
             </div>
         </div>
@@ -556,15 +558,12 @@
             try { const { series, date } = await loadRbPrices(); renderRbCard(series, date); renderRbChart(series); } catch (err) { renderRbError(err); }
         }
 
-        /* ---------- KSE: CUSTOM PROXY CLOUDFLARE WORKER ---------- */
         async function refreshKse() {
             try {
-                // Odpytanie własnego Cloudflare Workera
                 const response = await fetch('https://pse-kse-proxy.lewwraff.workers.dev/', { cache: 'no-store' });
                 if (!response.ok) throw new Error(`Błąd API: ${response.status}`);
                 const data = await response.json();
 
-                // Uniwersalny skaner szukający wartości (odporny na różnice między formatem PV Index a czystym PSE)
                 function findVal(obj, keys) {
                     if (!obj) return null;
                     const searchArea = [obj, obj.data, obj.podsumowanie].filter(Boolean);
@@ -587,11 +586,9 @@
                 
                 let saldo = null;
                 if (data.flow_se !== undefined) {
-                    // Tryb danych przekierowanych z PV Index
                     const flowKeys = ['flow_se', 'flow_de', 'flow_cz', 'flow_sk', 'flow_ua', 'flow_lt'];
                     saldo = flowKeys.reduce((sum, key) => sum + (Number.isFinite(Number(data[key])) ? Number(data[key]) : 0), 0);
                 } else {
-                    // Tryb danych bezpośrednio z Mapy PSE
                     saldo = findVal(data, ['saldo', 'balance']);
                     if (saldo === null && data.data && data.data.przesyly) {
                         const sRow = data.data.przesyly.find(p => String(p.id).toUpperCase() === 'SALDO');
@@ -616,23 +613,20 @@
             }
         }
 
-        // ---------- Pogoda (Open-Meteo) ECMWF / ICON ----------
+        // ---------- ZMODYFIKOWANE ZAPYTANIE (Modele wysokiej rozdzielczości) ----------
+        async function loadOpenMeteo() {
+            // models=best_match automatycznie wybierze i zblenduje najlepsze dostępne modele europejskie (ECMWF, ICON-EU, ICON-D2)
+            // zapobiegając jednocześnie zmianie nazw zmiennych w pliku JSON, co niszczyło parser.
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m&hourly=temperature_2m,precipitation,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,pressure_msl&models=best_match&timezone=${encodeURIComponent(TZ)}&forecast_days=2`;
+            return getJson(url);
+        }
+
         const WMO = {
             0: ['Bezchmurnie', '☀️'], 1: ['Prawie bezchmurnie', '🌤️'], 2: ['Częściowe zachmurzenie', '⛅'], 3: ['Pochmurno', '☁️'],
             45: ['Mgła', '🌫️'], 61: ['Lekki deszcz', '🌦️'], 63: ['Deszcz', '🌧️'], 71: ['Lekki śnieg', '🌨️'], 73: ['Śnieg', '❄️'], 95: ['Burza', '⛈️']
         };
         const wmo = c => WMO[c] || ['—', '·'];
         const HOURLY_CELLS = 36;
-
-        function compass(deg) {
-            if (deg === null || deg === undefined || isNaN(deg)) return '';
-            return ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'][Math.round(deg / 22.5) % 16];
-        }
-
-        async function loadOpenMeteo() {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m&hourly=temperature_2m,precipitation,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,pressure_msl&models=ecmwf_ifs04,dwd_icon_eu&timezone=${encodeURIComponent(TZ)}&forecast_days=2`;
-            return getJson(url);
-        }
 
         function renderHourly(h, curTime) {
             let start = h.time.findIndex(t => t.slice(0, 13) === String(curTime).slice(0, 13));
@@ -723,7 +717,7 @@
                 
                 renderHourly(h, c.time);
                 renderTempChart(h, c.time);
-                $('om-status').innerHTML = '<span class="pulse"></span>Modele: ECMWF + ICON-EU';
+                $('om-status').innerHTML = '<span class="pulse"></span>Modele: ECMWF + ICON (Best Match)';
                 $('om-time').innerText = 'sprawdzono ' + nowStr();
             } catch (err) { console.error('Open-Meteo:', err); }
         }
