@@ -27,41 +27,21 @@
             min-height: 100vh;
         }
         header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            padding: 16px 24px;
-            border-radius: 12px;
-            margin-bottom: 24px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            padding: 16px 24px; border-radius: 12px; margin-bottom: 24px;
         }
         h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
         .clock-box { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 700; color: var(--accent-blue); }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-            margin-bottom: 24px;
-        }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px; }
         .card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
         }
         .card h2 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .full { grid-column: 1 / -1; }
 
-        .value-huge {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 2.8rem;
-            font-weight: 800;
-            margin: 10px 0;
-            letter-spacing: -1px;
-        }
+        .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 2.8rem; font-weight: 800; margin: 10px 0; letter-spacing: -1px; }
         .sub-info { font-size: 0.85rem; color: var(--text-muted); margin-top: 8px; }
 
         .pse-table { width: 100%; margin-top: 8px; border-collapse: collapse; }
@@ -69,60 +49,50 @@
         .pse-table td { padding: 7px 4px; font-size: 0.9rem; }
         .pse-table td.label { color: var(--text-muted); font-weight: 600; }
         .pse-table td.sub-label { color: var(--text-muted); padding-left: 15px; font-size: 0.85rem; }
-        .pse-table td.val {
-            text-align: right;
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
-            color: var(--text-main);
-        }
+        .pse-table td.val { text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--text-main); }
 
-        .weather-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        .weather-item { background: rgba(255,255,255,0.03); padding: 8px; border-radius: 8px; }
+        .weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 12px; }
+        .weather-item { background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 8px; }
         .weather-item span { display: block; font-size: 0.75rem; color: var(--text-muted); }
         .weather-item strong { font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; }
+        .weather-item small { display: block; font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
 
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr));
-            gap: 20px;
-            margin-bottom: 24px;
+        .wx-top { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+
+        .hourly-title { font-size: 0.8rem; color: var(--text-muted); margin: 18px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .hourly { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; }
+        .hour-cell {
+            flex: 0 0 82px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px; padding: 8px 6px; text-align: center; font-size: 0.78rem;
         }
+        .hour-cell.now { border-color: var(--accent-orange); }
+        .hour-cell .h { color: var(--text-muted); font-weight: 600; }
+        .hour-cell .ic { font-size: 1.3rem; margin: 4px 0; }
+        .hour-cell .t { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 0.95rem; }
+        .hour-cell .p { margin-top: 4px; min-height: 1.2em; color: #60a5fa; }
+        .hour-cell .p.snow { color: #e0f2fe; }
+        .hour-cell .w { margin-top: 4px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); }
+        .hour-cell .w.mid { color: var(--accent-orange); }
+        .hour-cell .w.high { color: var(--accent-red); font-weight: 700; }
+
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr)); gap: 20px; margin-bottom: 24px; }
         .chart-container { position: relative; height: 320px; width: 100%; }
 
         .status-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            border-top: 1px solid var(--border-color);
-            padding-top: 10px;
-            margin-top: 10px;
+            display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+            font-size: 0.8rem; color: var(--text-muted);
+            border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 10px;
         }
-        .pulse {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: var(--accent-green);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-            margin-right: 6px;
-        }
+        .pulse { display: inline-block; width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; animation: pulse 2s infinite; margin-right: 6px; }
         .pulse.err { background: var(--accent-red); animation: none; }
+        .err-text { color: var(--accent-red); }
         @keyframes pulse {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
-        button {
-            background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;
-        }
+        button { background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
         button:hover { background: #1d4ed8; }
     </style>
 </head>
@@ -131,7 +101,7 @@
     <header>
         <div>
             <h1>⚡ Panel Nastawni (EC) - PSE Live</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB (CEN, COR, CKOEB) z API PSE + pogoda Zielona Góra</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB (CEN, COR, CKOEB) z API PSE + pogoda Zielona Góra (IMGW-PIB, Open-Meteo)</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div id="clock" class="clock-box">--:--:--</div>
@@ -140,21 +110,15 @@
     </header>
 
     <div class="grid">
-        <!-- CEN - GŁÓWNA CENA -->
+        <!-- CEN -->
         <div class="card" style="border: 2px solid var(--accent-red);">
             <h2>Ceny na Rynku Bilansującym (RB)</h2>
             <div id="cen-price" class="value-huge" style="color: var(--accent-red);">--</div>
-            <div class="sub-info" id="cen-sub">CEN (cena rozliczeniowa energii bilansującej) [zł/MWh]</div>
+            <div class="sub-info" id="cen-sub">CEN [zł/MWh]</div>
 
-            <div class="weather-grid" style="margin-top: 15px;">
-                <div class="weather-item">
-                    <span>COR [zł/MWh]</span>
-                    <strong id="cor-price" style="color: var(--accent-blue);">--</strong>
-                </div>
-                <div class="weather-item">
-                    <span>CKOEB [zł/MWh]</span>
-                    <strong id="ckoeb-price">--</strong>
-                </div>
+            <div class="weather-grid">
+                <div class="weather-item"><span>COR [zł/MWh]</span><strong id="cor-price" style="color: var(--accent-blue);">--</strong></div>
+                <div class="weather-item"><span>CKOEB [zł/MWh]</span><strong id="ckoeb-price">--</strong></div>
             </div>
 
             <div class="status-bar">
@@ -163,61 +127,69 @@
             </div>
         </div>
 
-        <!-- BILANS I GENERACJA W KSE (dane statyczne - patrz uwaga w odpowiedzi) -->
+        <!-- BILANS KSE (dane ręczne) -->
         <div class="card" style="border: 2px solid var(--accent-blue);">
             <h2>Bilans i Generacja w KSE</h2>
-
             <table class="pse-table">
-                <tr>
-                    <td class="label">ZAPOTRZEBOWANIE [MW]</td>
-                    <td class="val" id="pse-zapotrzebowanie" style="font-size: 1.15rem; color: var(--accent-blue);">23 276</td>
-                </tr>
-                <tr>
-                    <td class="label">GENERACJA [MW]</td>
-                    <td class="val" id="pse-generacja" style="font-size: 1.15rem; color: var(--accent-green);">22 257</td>
-                </tr>
+                <tr><td class="label">ZAPOTRZEBOWANIE [MW]</td><td class="val" style="font-size: 1.15rem; color: var(--accent-blue);">23 276</td></tr>
+                <tr><td class="label">GENERACJA [MW]</td><td class="val" style="font-size: 1.15rem; color: var(--accent-green);">22 257</td></tr>
                 <tr><td class="sub-label">el. cieplne</td><td class="val">16 767</td></tr>
                 <tr><td class="sub-label">el. wodne</td><td class="val">72</td></tr>
                 <tr><td class="sub-label">el. wiatrowe lądowe</td><td class="val">3 704</td></tr>
                 <tr><td class="sub-label">el. wiatrowe morskie</td><td class="val">118</td></tr>
                 <tr><td class="sub-label">el. fotowoltaiczne</td><td class="val">1 600</td></tr>
                 <tr><td class="sub-label">el. inne odnawialne</td><td class="val">0</td></tr>
-                <tr>
-                    <td class="label">SALDO WYMIANY CAŁKOWITEJ [MW]</td>
-                    <td class="val" style="color: var(--accent-green);">1 071 IMPORT</td>
-                </tr>
-                <tr>
-                    <td class="label">CZĘSTOTLIWOŚĆ [Hz]</td>
-                    <td class="val" style="color: var(--accent-orange);">50,016</td>
-                </tr>
+                <tr><td class="label">SALDO WYMIANY CAŁKOWITEJ [MW]</td><td class="val" style="color: var(--accent-green);">1 071 IMPORT</td></tr>
+                <tr><td class="label">CZĘSTOTLIWOŚĆ [Hz]</td><td class="val" style="color: var(--accent-orange);">50,016</td></tr>
             </table>
-
-            <div class="status-bar" style="margin-top: 10px;">
+            <div class="status-bar">
                 <span>Wartości wpisane ręcznie</span>
                 <span>Nie aktualizują się</span>
             </div>
         </div>
 
-        <!-- POGODA ZIELONA GÓRA -->
-        <div class="card">
-            <h2 id="weather-title">Pogoda (Zielona Góra)</h2>
-            <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
-                <div id="weather-temp" class="value-huge" style="font-size: 2.8rem; color: var(--text-main);">--°C</div>
+        <!-- POGODA -->
+        <div class="card full">
+            <h2>Pogoda (Zielona Góra)</h2>
+            <div class="wx-top">
+                <div id="weather-temp" class="value-huge" style="font-size: 2.8rem;">--°C</div>
                 <div id="weather-desc" style="font-size: 0.95rem; color: var(--text-muted);">Pobieranie...</div>
             </div>
-            <div class="weather-grid">
+
+            <div class="metrics-grid">
+                <div class="weather-item">
+                    <span>Ciśnienie [hPa]</span>
+                    <strong id="wx-pressure">--</strong>
+                    <small id="wx-pressure-range">dziś: --</small>
+                </div>
+                <div class="weather-item">
+                    <span>Wilgotność</span>
+                    <strong id="wx-humidity">--</strong>
+                </div>
+                <div class="weather-item">
+                    <span>Punkt rosy</span>
+                    <strong id="wx-dew">--</strong>
+                </div>
+                <div class="weather-item">
+                    <span>Wiatr (średni)</span>
+                    <strong id="wx-wind">--</strong>
+                </div>
                 <div class="weather-item">
                     <span>Max wiatr (poryw)</span>
-                    <strong id="weather-max-wind" style="color: var(--accent-orange);">-- km/h</strong>
+                    <strong id="weather-max-wind" style="color: var(--accent-orange);">--</strong>
                 </div>
                 <div class="weather-item">
                     <span>Opady / Stan</span>
                     <strong id="weather-precip">--</strong>
                 </div>
             </div>
+
+            <div class="hourly-title">Najbliższe 24 godziny: temperatura, opady, wiatr (w nawiasie porywy, km/h)</div>
+            <div id="hourly" class="hourly"><span class="sub-info">Pobieranie prognozy...</span></div>
+
             <div class="status-bar">
-                <span><span class="pulse"></span>Open-Meteo API</span>
-                <span id="weather-pressure-info">Ciśnienie: -- hPa</span>
+                <span id="imgw-status">IMGW-PIB: --</span>
+                <span id="om-status">Open-Meteo: --</span>
             </div>
         </div>
     </div>
@@ -225,140 +197,154 @@
     <div class="charts-grid">
         <div class="card">
             <h2>Ceny i Niezbilansowanie na RB (CEN, COR, CKOEB) [zł/MWh]</h2>
-            <div class="chart-container">
-                <canvas id="rbChart"></canvas>
-            </div>
+            <div class="chart-container"><canvas id="rbChart"></canvas></div>
         </div>
         <div class="card">
-            <h2>Temperatura godzinowa - Zielona Góra [°C]</h2>
-            <div class="chart-container">
-                <canvas id="tempChart"></canvas>
-            </div>
+            <h2>Temperatura godzinowa i opady - Zielona Góra</h2>
+            <div class="chart-container"><canvas id="tempChart"></canvas></div>
         </div>
     </div>
 
     <script>
         const PSE_API = 'https://api.raporty.pse.pl/api/';
+        const IMGW_URL = 'https://danepubliczne.imgw.pl/api/data/synop/id/12400'; // stacja synoptyczna Zielona Góra
         const TZ = 'Europe/Warsaw';
         const LAT = 51.9356, LON = 15.5065;
 
         let rbChart = null;
         let tempChart = null;
 
-        // ---------- Zegar ----------
         setInterval(() => {
             document.getElementById('clock').innerText = new Date().toLocaleTimeString('pl-PL', { timeZone: TZ });
         }, 1000);
 
         // ---------- Pomocnicze ----------
+        const $ = id => document.getElementById(id);
         function warsawDate(offsetDays = 0) {
-            const d = new Date(Date.now() + offsetDays * 86400000);
-            return new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(d); // YYYY-MM-DD
+            return new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(new Date(Date.now() + offsetDays * 86400000));
         }
-        function warsawHour() {
-            return parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hour12: false }).format(new Date()), 10) % 24;
-        }
-        function fmt(v) {
-            return (v === null || v === undefined || isNaN(v))
-                ? '--'
-                : Number(v).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        function fmt(v, d = 2) {
+            return (v === null || v === undefined || isNaN(v)) ? '--'
+                : Number(v).toLocaleString('pl-PL', { minimumFractionDigits: d, maximumFractionDigits: d });
         }
         function hhmm(dtime) { return String(dtime).slice(11, 16); }
+        function num(v) { return (v === null || v === undefined || v === '') ? null : Number(v); }
 
-        // Pobiera wszystkie rekordy z endpointu PSE (OData, ze stronicowaniem @odata.nextLink)
+        async function getJson(url, ms = 15000) {
+            const c = new AbortController();
+            const t = setTimeout(() => c.abort(), ms);
+            try {
+                const r = await fetch(url, { signal: c.signal, cache: 'no-store' });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return await r.json();
+            } finally { clearTimeout(t); }
+        }
+        function explain(err) {
+            // TypeError "Failed to fetch" = blokada sieci / CORS / brak internetu
+            return (err && err.name === 'TypeError')
+                ? 'brak dostępu do sieci (blokada CORS/CSP lub brak internetu)'
+                : (err && err.name === 'AbortError') ? 'przekroczono czas oczekiwania'
+                : String(err && err.message || err);
+        }
+
+        // ---------- PSE: ceny RB ----------
         async function pseFetch(endpoint, businessDate) {
             let url = PSE_API + endpoint + '?$filter=' + encodeURIComponent(`business_date eq '${businessDate}'`);
             const rows = [];
             for (let guard = 0; url && guard < 10; guard++) {
-                const res = await fetch(url, { cache: 'no-store' });
-                if (!res.ok) throw new Error(`${endpoint}: HTTP ${res.status}`);
-                const json = await res.json();
+                const json = await getJson(url);
                 rows.push(...(json.value || []));
                 url = json['@odata.nextLink'] || null;
             }
             return rows;
         }
 
-        // ---------- Ceny RB z PSE ----------
-        // price-cost = dane rozliczeniowe (opóźnione), price-fcst = dane bieżące/prognoza.
-        // Dla każdego kwadransa bierzemy wartość rozliczeniową, a gdy jej brak - bieżącą.
-        async function loadRbPrices() {
-            const today = warsawDate();
-            const [cost, fcst] = await Promise.all([
-                pseFetch('price-cost', today).catch(() => []),
-                pseFetch('price-fcst', today).catch(() => [])
-            ]);
-
-            const byTime = new Map();
-            const num = v => (v === null || v === undefined || v === '') ? null : Number(v);
-
-            fcst.forEach(r => {
-                byTime.set(r.dtime, {
-                    dtime: r.dtime,
-                    cen: num(r.cen_fcst),
-                    cor: num(r.cor_fcst),
-                    ckoeb: num(r.ckoeb_fcst),
-                    pub: r.publication_ts
-                });
-            });
-            cost.forEach(r => {
-                const prev = byTime.get(r.dtime) || { dtime: r.dtime };
-                byTime.set(r.dtime, {
-                    dtime: r.dtime,
-                    cen: num(r.cen_cost) ?? prev.cen ?? null,
-                    cor: num(r.cor_pp_cost ?? r.cor_cost) ?? prev.cor ?? null,
-                    ckoeb: num(r.ckoeb_cost) ?? prev.ckoeb ?? null,
-                    pub: r.publication_ts || prev.pub
-                });
-            });
-
-            const series = [...byTime.values()].sort((a, b) => String(a.dtime).localeCompare(String(b.dtime)));
-            if (!series.length) throw new Error('Brak danych RB dla doby ' + today);
-            return series;
+        function mergeRb(costRows, fcstRows) {
+            const map = new Map();
+            const key = r => r.dtime ?? r.udtczas_oreb ?? r.udtczas ?? r.period;
+            const upsert = (r, c, pr) => {
+                const k = key(r); if (!k) return;
+                const o = map.get(k) || { dtime: k, cen: null, cor: null, ckoeb: null, pub: null, _src: {} };
+                const set = (f, v) => { v = num(v); if (v !== null && (o._src[f] ?? 0) <= pr) { o[f] = v; o._src[f] = pr; } };
+                set('cen', c.cen); set('cor', c.cor); set('ckoeb', c.ckoeb);
+                o.pub = r.publication_ts || r.source_datetime || o.pub;
+                map.set(k, o);
+            };
+            fcstRows.forEach(r => upsert(r, {
+                cen: r.cen_fcst ?? r.cen_prog, cor: r.cor_fcst ?? r.cor_pp_prog, ckoeb: r.ckoeb_fcst ?? r.ckoeb_prog
+            }, 1));
+            costRows.forEach(r => upsert(r, {
+                cen: r.cen_cost ?? r.cen_rozl, cor: r.cor_pp_cost ?? r.cor_cost ?? r.cor_pp_rozl, ckoeb: r.ckoeb_cost ?? r.ckoeb_rozl
+            }, 2));
+            return [...map.values()].sort((a, b) => String(a.dtime).localeCompare(String(b.dtime)));
         }
 
-        function renderRbCard(series) {
-            // ostatni rekord z wartością CEN
+        async function loadRbForDate(date, log) {
+            const tryList = async (names) => {
+                const res = await Promise.allSettled(names.map(n => pseFetch(n, date)));
+                res.forEach((r, i) => log.push(r.status === 'fulfilled' ? `${names[i]}: ${r.value.length} rek.` : `${names[i]}: ${explain(r.reason)}`));
+                return res.map(r => r.status === 'fulfilled' ? r.value : []);
+            };
+            let [cost, fcst] = await tryList(['price-cost', 'price-fcst']);
+            if (!cost.length && !fcst.length) {
+                // starsze nazwy endpointów (API v1)
+                const [a, b, c, d] = await tryList(['crb-rozl', 'cor-rozl', 'crb-prog', 'cor-prog']);
+                cost = [...a, ...b]; fcst = [...c, ...d];
+            }
+            return mergeRb(cost, fcst);
+        }
+
+        async function loadRbPrices() {
+            const log = [];
+            for (const date of [warsawDate(), warsawDate(-1)]) { // po północy dane nowej doby mogą jeszcze nie istnieć
+                const series = await loadRbForDate(date, log);
+                if (series.some(r => r.cen !== null)) return { series, date };
+            }
+            const e = new Error('Brak danych RB (' + log.join('; ') + ')');
+            e.details = log;
+            throw e;
+        }
+
+        function renderRbCard(series, date) {
             const last = [...series].reverse().find(r => r.cen !== null) || series[series.length - 1];
-            const cenEl = document.getElementById('cen-price');
+            const cenEl = $('cen-price');
             cenEl.innerText = fmt(last.cen) + ' zł';
             cenEl.style.color = (last.cen !== null && last.cen < 0) ? 'var(--accent-green)' : 'var(--accent-red)';
-            document.getElementById('cor-price').innerText = fmt(last.cor);
-            document.getElementById('ckoeb-price').innerText = fmt(last.ckoeb);
-            document.getElementById('cen-sub').innerText = `CEN [zł/MWh] - okres do ${hhmm(last.dtime)}`;
-            document.getElementById('cen-update-time').innerText = last.pub
-                ? 'Publikacja: ' + String(last.pub).replace('T', ' ').slice(0, 16)
-                : 'Doba: ' + warsawDate();
-            document.getElementById('cen-pulse').classList.remove('err');
-            document.getElementById('cen-status').innerText = 'Portal PSE Live';
+            $('cor-price').innerText = fmt(last.cor);
+            $('ckoeb-price').innerText = fmt(last.ckoeb);
+            $('cen-sub').innerText = `CEN [zł/MWh] - doba ${date}, okres do ${hhmm(last.dtime)}`;
+            $('cen-update-time').innerText = last.pub ? 'Publikacja: ' + String(last.pub).replace('T', ' ').slice(0, 16) : '';
+            $('cen-pulse').classList.remove('err');
+            $('cen-status').classList.remove('err-text');
+            $('cen-status').innerText = 'Portal PSE Live';
         }
 
         function renderRbError(err) {
             console.error('Błąd API PSE:', err);
-            document.getElementById('cen-pulse').classList.add('err');
-            document.getElementById('cen-status').innerText = 'Błąd połączenia z API PSE';
+            $('cen-pulse').classList.add('err');
+            $('cen-status').classList.add('err-text');
+            $('cen-status').innerText = 'Błąd API PSE: ' + explain(err);
         }
 
         function renderRbChart(series) {
             const labels = series.map(r => hhmm(r.dtime));
-            const datasets = [
-                { label: 'CEN',   data: series.map(r => r.cen),   borderColor: '#ef4444', borderWidth: 2.5 },
-                { label: 'COR',   data: series.map(r => r.cor),   borderColor: '#94a3b8', borderWidth: 2 },
+            const ds = [
+                { label: 'CEN', data: series.map(r => r.cen), borderColor: '#ef4444', borderWidth: 2.5 },
+                { label: 'COR', data: series.map(r => r.cor), borderColor: '#94a3b8', borderWidth: 2 },
                 { label: 'CKOEB', data: series.map(r => r.ckoeb), borderColor: '#3b82f6', borderWidth: 2 }
             ].map(d => ({ ...d, fill: false, tension: 0.15, pointRadius: 0, spanGaps: true }));
 
             if (rbChart) {
                 rbChart.data.labels = labels;
-                rbChart.data.datasets.forEach((ds, i) => { ds.data = datasets[i].data; });
+                rbChart.data.datasets.forEach((d, i) => { d.data = ds[i].data; });
                 rbChart.update('none');
                 return;
             }
-            rbChart = new Chart(document.getElementById('rbChart').getContext('2d'), {
+            rbChart = new Chart($('rbChart').getContext('2d'), {
                 type: 'line',
-                data: { labels, datasets },
+                data: { labels, datasets: ds },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
                     plugins: { legend: { labels: { color: '#f8fafc' } } },
                     scales: {
@@ -371,101 +357,185 @@
 
         async function refreshRb() {
             try {
-                const series = await loadRbPrices();
-                renderRbCard(series);
+                const { series, date } = await loadRbPrices();
+                renderRbCard(series, date);
                 renderRbChart(series);
-            } catch (err) {
-                renderRbError(err);
-            }
+            } catch (err) { renderRbError(err); }
         }
 
-        // ---------- Pogoda + wykres temperatury ----------
+        // ---------- Pogoda ----------
         const WMO = {
-            0: 'Bezchmurnie', 1: 'Prawie bezchmurnie', 2: 'Częściowe zachmurzenie', 3: 'Pochmurno',
-            45: 'Mgła', 48: 'Mgła szronowa', 51: 'Lekka mżawka', 53: 'Mżawka', 55: 'Silna mżawka',
-            61: 'Lekki deszcz', 63: 'Deszcz', 65: 'Silny deszcz', 71: 'Lekki śnieg', 73: 'Śnieg', 75: 'Silny śnieg',
-            80: 'Przelotny deszcz', 81: 'Przelotny deszcz', 82: 'Ulewa', 95: 'Burza', 96: 'Burza z gradem', 99: 'Burza z gradem'
+            0: ['Bezchmurnie', '☀️'], 1: ['Prawie bezchmurnie', '🌤️'], 2: ['Częściowe zachmurzenie', '⛅'], 3: ['Pochmurno', '☁️'],
+            45: ['Mgła', '🌫️'], 48: ['Mgła szronowa', '🌫️'],
+            51: ['Lekka mżawka', '🌦️'], 53: ['Mżawka', '🌦️'], 55: ['Silna mżawka', '🌧️'], 56: ['Marznąca mżawka', '🌧️'], 57: ['Marznąca mżawka', '🌧️'],
+            61: ['Lekki deszcz', '🌦️'], 63: ['Deszcz', '🌧️'], 65: ['Silny deszcz', '🌧️'], 66: ['Marznący deszcz', '🌧️'], 67: ['Marznący deszcz', '🌧️'],
+            71: ['Lekki śnieg', '🌨️'], 73: ['Śnieg', '❄️'], 75: ['Silny śnieg', '❄️'], 77: ['Ziarna śniegu', '❄️'],
+            80: ['Przelotny deszcz', '🌦️'], 81: ['Przelotny deszcz', '🌧️'], 82: ['Ulewa', '⛈️'],
+            85: ['Przelotny śnieg', '🌨️'], 86: ['Intensywny śnieg', '❄️'],
+            95: ['Burza', '⛈️'], 96: ['Burza z gradem', '⛈️'], 99: ['Burza z gradem', '⛈️']
         };
+        const wmo = c => WMO[c] || ['—', '·'];
 
-        function renderTempChart(times, temps) {
-            const labels = times.map(t => t.slice(11, 16));
-            const nowH = warsawHour();
-            const hourColors = temps.map((_, i) => i === nowH ? '#f59e0b' : '#3b82f6');
-            const hourRadius = temps.map((_, i) => i === nowH ? 5 : 2);
+        function compass(deg) {
+            if (deg === null || deg === undefined || isNaN(deg)) return '';
+            return ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'][Math.round(deg / 22.5) % 16];
+        }
+        function dewPoint(t, rh) { // wzór Magnusa
+            if (t === null || rh === null || rh <= 0) return null;
+            const g = Math.log(rh / 100) + (17.62 * t) / (243.12 + t);
+            return 243.12 * g / (17.62 - g);
+        }
+
+        // Pomiar z IMGW-PIB (synop, stacja Zielona Góra)
+        async function loadImgw() {
+            const d = await getJson(IMGW_URL);
+            const o = Array.isArray(d) ? d[0] : d;
+            const t = num(o.temperatura), rh = num(o.wilgotnosc_wzgledna);
+            return {
+                temp: t, rh,
+                pressure: num(o.cisnienie),
+                windMs: num(o.predkosc_wiatru), windDir: num(o.kierunek_wiatru),
+                precip: num(o.suma_opadu),
+                dew: dewPoint(t, rh),
+                when: `${o.data_pomiaru} ${String(o.godzina_pomiaru).padStart(2, '0')}:00`
+            };
+        }
+
+        async function loadOpenMeteo() {
+            const url = 'https://api.open-meteo.com/v1/forecast'
+                + `?latitude=${LAT}&longitude=${LON}`
+                + '&current=temperature_2m,relative_humidity_2m,dew_point_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl'
+                + '&hourly=temperature_2m,precipitation,rain,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,pressure_msl'
+                + `&timezone=${encodeURIComponent(TZ)}&forecast_days=2`;
+            return getJson(url);
+        }
+
+        function renderHourly(h, curTime) {
+            const box = $('hourly');
+            let start = h.time.findIndex(t => t.slice(0, 13) === String(curTime).slice(0, 13));
+            if (start < 0) start = 0;
+            const end = Math.min(start + 24, h.time.length);
+            let html = '';
+            for (let i = start; i < end; i++) {
+                const snow = h.snowfall[i] || 0, prec = h.precipitation[i] || 0;
+                let p = '—', pc = 'p';
+                if (snow > 0) { p = `❄ ${fmt(snow, 1)} cm`; pc = 'p snow'; }
+                else if (prec > 0) { p = `🌧 ${fmt(prec, 1)} mm`; }
+                const ws = Math.round(h.wind_speed_10m[i]), g = Math.round(h.wind_gusts_10m[i]);
+                const wc = g >= 60 ? 'w high' : g >= 40 ? 'w mid' : 'w';
+                html += `<div class="hour-cell${i === start ? ' now' : ''}">
+                    <div class="h">${h.time[i].slice(11, 16)}</div>
+                    <div class="ic" title="${wmo(h.weather_code[i])[0]}">${wmo(h.weather_code[i])[1]}</div>
+                    <div class="t">${Math.round(h.temperature_2m[i])}°</div>
+                    <div class="${pc}">${p}</div>
+                    <div class="${wc}">${ws} (${g})</div>
+                </div>`;
+            }
+            box.innerHTML = html;
+        }
+
+        function renderTempChart(h, curTime) {
+            const today = String(curTime).slice(0, 10);
+            const idx = h.time.map((t, i) => t.startsWith(today) ? i : -1).filter(i => i >= 0);
+            const labels = idx.map(i => h.time[i].slice(11, 16));
+            const temps = idx.map(i => h.temperature_2m[i]);
+            const rain = idx.map(i => h.precipitation[i]);
+            const nowH = parseInt(String(curTime).slice(11, 13), 10);
+            const colors = temps.map((_, i) => i === nowH ? '#f59e0b' : '#3b82f6');
+            const radius = temps.map((_, i) => i === nowH ? 5 : 2);
+            const seg = { borderDash: c => c.p0DataIndex >= nowH ? [6, 4] : undefined };
 
             if (tempChart) {
                 tempChart.data.labels = labels;
                 tempChart.data.datasets[0].data = temps;
-                tempChart.data.datasets[0].pointBackgroundColor = hourColors;
-                tempChart.data.datasets[0].pointRadius = hourRadius;
-                tempChart.data.datasets[0].segment.borderDash = ctx => ctx.p0DataIndex >= nowH ? [6, 4] : undefined;
+                tempChart.data.datasets[0].pointBackgroundColor = colors;
+                tempChart.data.datasets[0].pointRadius = radius;
+                tempChart.data.datasets[0].segment = seg;
+                tempChart.data.datasets[1].data = rain;
                 tempChart.update('none');
                 return;
             }
-            tempChart = new Chart(document.getElementById('tempChart').getContext('2d'), {
-                type: 'line',
+            tempChart = new Chart($('tempChart').getContext('2d'), {
                 data: {
                     labels,
-                    datasets: [{
-                        label: 'Temperatura [°C] (linia przerywana = prognoza)',
-                        data: temps,
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59,130,246,0.12)',
-                        borderWidth: 2.5,
-                        fill: true,
-                        tension: 0.3,
-                        pointBackgroundColor: hourColors,
-                        pointRadius: hourRadius,
-                        segment: { borderDash: ctx => ctx.p0DataIndex >= nowH ? [6, 4] : undefined }
-                    }]
+                    datasets: [
+                        {
+                            type: 'line', label: 'Temperatura [°C] (przerywana = prognoza)', data: temps, yAxisID: 'y',
+                            borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.12)', borderWidth: 2.5, fill: true, tension: 0.3,
+                            pointBackgroundColor: colors, pointRadius: radius, segment: seg, order: 1
+                        },
+                        {
+                            type: 'bar', label: 'Opady [mm]', data: rain, yAxisID: 'y1',
+                            backgroundColor: 'rgba(96,165,250,0.55)', order: 2
+                        }
+                    ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
                     plugins: { legend: { labels: { color: '#f8fafc' } } },
                     scales: {
                         x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', maxTicksLimit: 12 } },
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', callback: v => v + '°' } }
+                        y: { position: 'left', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', callback: v => v + '°' } },
+                        y1: { position: 'right', beginAtZero: true, suggestedMax: 2, grid: { drawOnChartArea: false }, ticks: { color: '#60a5fa' } }
                     }
                 }
             });
         }
 
+        function setStatus(id, name, ok, msg) {
+            const el = $(id);
+            el.innerHTML = `<span class="pulse${ok ? '' : ' err'}"></span>${name}: ${ok ? msg : '<span class="err-text">' + msg + '</span>'}`;
+        }
+
         async function refreshWeather() {
-            try {
-                const url = 'https://api.open-meteo.com/v1/forecast'
-                    + `?latitude=${LAT}&longitude=${LON}`
-                    + '&current=temperature_2m,precipitation,weather_code,wind_gusts_10m,surface_pressure'
-                    + '&hourly=temperature_2m'
-                    + `&timezone=${encodeURIComponent(TZ)}&forecast_days=1`;
-                const res = await fetch(url, { cache: 'no-store' });
-                if (!res.ok) throw new Error('Open-Meteo HTTP ' + res.status);
-                const data = await res.json();
+            const [imgwR, omR] = await Promise.allSettled([loadImgw(), loadOpenMeteo()]);
+            const imgw = imgwR.status === 'fulfilled' ? imgwR.value : null;
+            const om = omR.status === 'fulfilled' ? omR.value : null;
 
-                const c = data.current;
-                document.getElementById('weather-temp').innerText = c.temperature_2m + '°C';
-                document.getElementById('weather-desc').innerText = WMO[c.weather_code] || 'Zielona Góra';
-                document.getElementById('weather-max-wind').innerText = c.wind_gusts_10m + ' km/h';
-                document.getElementById('weather-precip').innerText = c.precipitation > 0 ? `${c.precipitation} mm/h` : 'Brak opadów';
-                document.getElementById('weather-pressure-info').innerText = `Ciśnienie: ${Math.round(c.surface_pressure)} hPa`;
+            if (imgw) setStatus('imgw-status', 'IMGW-PIB', true, 'pomiar z ' + imgw.when);
+            else { console.error('IMGW:', imgwR.reason); setStatus('imgw-status', 'IMGW-PIB', false, explain(imgwR.reason)); }
+            if (om) setStatus('om-status', 'Open-Meteo', true, 'prognoza OK');
+            else { console.error('Open-Meteo:', omR.reason); setStatus('om-status', 'Open-Meteo', false, explain(omR.reason)); }
 
-                renderTempChart(data.hourly.time, data.hourly.temperature_2m);
-            } catch (err) {
-                console.error('Błąd pogody:', err);
-                document.getElementById('weather-desc').innerText = 'Błąd pobierania';
+            const c = om ? om.current : null;
+
+            // Wartości bieżące: pomiar IMGW ma pierwszeństwo, Open-Meteo jako uzupełnienie
+            const temp = imgw?.temp ?? c?.temperature_2m ?? null;
+            const rh = imgw?.rh ?? c?.relative_humidity_2m ?? null;
+            const dew = imgw?.dew ?? c?.dew_point_2m ?? null;
+            const pres = imgw?.pressure ?? c?.pressure_msl ?? null;
+            const windKmh = imgw?.windMs != null ? imgw.windMs * 3.6 : (c?.wind_speed_10m ?? null);
+            const windDir = imgw?.windDir ?? c?.wind_direction_10m ?? null;
+            const precip = imgw?.precip ?? c?.precipitation ?? null;
+
+            $('weather-temp').innerText = temp !== null ? fmt(temp, 1) + '°C' : '--°C';
+            $('weather-desc').innerText = c ? wmo(c.weather_code)[1] + ' ' + wmo(c.weather_code)[0] : (imgw ? 'Pomiar IMGW-PIB' : 'Brak danych');
+            $('wx-pressure').innerText = pres !== null ? fmt(pres, 1) : '--';
+            $('wx-humidity').innerText = rh !== null ? Math.round(rh) + ' %' : '--';
+            $('wx-dew').innerText = dew !== null ? fmt(dew, 1) + '°C' : '--';
+            $('wx-wind').innerText = windKmh !== null ? `${Math.round(windKmh)} km/h ${compass(windDir)}` : '--';
+            $('weather-max-wind').innerText = c ? Math.round(c.wind_gusts_10m) + ' km/h' : '--';
+            $('weather-precip').innerText = precip !== null ? (precip > 0 ? fmt(precip, 1) + ' mm' : 'Brak opadów') : '--';
+
+            if (om) {
+                const h = om.hourly;
+                const today = String(c.time).slice(0, 10);
+                const pr = h.pressure_msl.filter((_, i) => h.time[i].startsWith(today));
+                $('wx-pressure-range').innerText = pr.length ? `dziś: ${fmt(Math.min(...pr), 0)}–${fmt(Math.max(...pr), 0)}` : 'dziś: --';
+                renderHourly(h, c.time);
+                renderTempChart(h, c.time);
+            } else {
+                $('hourly').innerHTML = '<span class="sub-info err-text">Brak prognozy godzinowej - Open-Meteo niedostępne.</span>';
             }
         }
 
         // ---------- Odświeżanie ----------
-        function refreshDashboard() {
-            refreshRb();
-            refreshWeather();
-        }
+        function refreshDashboard() { refreshRb(); refreshWeather(); }
 
         refreshDashboard();
-        setInterval(refreshRb, 60 * 1000);          // ceny RB co minutę
-        setInterval(refreshWeather, 10 * 60 * 1000); // pogoda co 10 minut
+        setInterval(refreshRb, 60 * 1000);
+        setInterval(refreshWeather, 10 * 60 * 1000);
     </script>
 </body>
 </html>
