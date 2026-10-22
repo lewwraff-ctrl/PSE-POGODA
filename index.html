@@ -25,7 +25,6 @@
             color: var(--text-main);
             padding: 20px;
             min-height: 100vh;
-            /* Domyślnie kursor normalny, chowanie sterowane przez JS */
             cursor: default; 
         }
         header {
@@ -52,10 +51,9 @@
             border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
             display: flex; flex-direction: column;
             transition: border-color 0.3s, background-color 0.3s;
-            min-width: 0;
+            min-width: 0; 
         }
 
-        /* Animacje dla wszystkich progów (w tym nowe ujemne chłodne barwy) */
         .card.alarm-teal { animation: pulse-teal 0.6s infinite alternate; }
         .card.alarm-sky { animation: pulse-sky 0.8s infinite alternate; }
         .card.alarm-blue { animation: pulse-blue 1s infinite alternate; }
@@ -142,7 +140,6 @@
         }
         .threshold-info span { padding: 2px 4px; background: rgba(255,255,255,0.03); border-radius: 4px; }
 
-        /* Tryb pełnoekranowy (Tylko kafelek, jeśli użyty przycisk, dla F11 działa globalnie) */
         #cen-card:fullscreen, #cen-card:-webkit-full-screen { background: var(--card-bg); padding: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100vw; height: 100vh; }
         #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: 14vw !important; margin: 20px 0; }
         #cen-card:fullscreen h2, #cen-card:-webkit-full-screen h2 { font-size: 2.2rem !important; }
@@ -183,19 +180,21 @@
                 <div class="weather-item"><span>CKOEB [zł/MWh]</span><strong id="ckoeb-price">--</strong></div>
             </div>
 
-            <!-- ROZBUDOWANE PROGI Z CENAMI UJEMNYMI -->
+            <!-- DRABINKA ZAKRESÓW OD -5000 DO 5000 -->
             <div class="threshold-info">
-                <span style="color: #2dd4bf;">&lt;-1k</span>
-                <span style="color: #0ea5e9;">-1k do -500</span>
-                <span style="color: #3b82f6;">-500 do -200</span>
-                <span style="color: #818cf8;">-200 do 0</span>
-                <span style="color: #10b981;">0-200</span>
-                <span style="color: #84cc16;">200-500</span>
-                <span style="color: #eab308;">500-800</span>
-                <span style="color: #f59e0b;">800-1k</span>
-                <span style="color: #ef4444;">1k-2k</span>
-                <span style="color: #b91c1c;">2k-4k</span>
-                <span style="color: #9333ea;">4k-5k</span>
+                <span style="color: #c026d3;">&lt;-5k</span>
+                <span style="color: #14b8a6;">-5k..-2k</span>
+                <span style="color: #06b6d4;">-2k..-1k</span>
+                <span style="color: #0ea5e9;">-1k..-500</span>
+                <span style="color: #3b82f6;">-500..-200</span>
+                <span style="color: #818cf8;">-200..0</span>
+                <span style="color: #10b981;">0..200</span>
+                <span style="color: #84cc16;">200..500</span>
+                <span style="color: #eab308;">500..800</span>
+                <span style="color: #f59e0b;">800..1k</span>
+                <span style="color: #ef4444;">1k..2k</span>
+                <span style="color: #b91c1c;">2k..4k</span>
+                <span style="color: #9333ea;">4k..5k</span>
                 <span style="color: #ec4899;">&gt;5k</span>
             </div>
 
@@ -205,7 +204,7 @@
             </div>
         </div>
 
-        <!-- KSE -->
+        <!-- KSE (POPRZEDNI SKRYPT BAZOWY) -->
         <div class="card" style="border: 2px solid var(--accent-blue);">
             <h2>Bilans KSE na żywo</h2>
             <div class="kse-box" style="margin-top: 6px;">
@@ -285,9 +284,6 @@
         const $ = id => document.getElementById(id);
         const pad = n => String(n).padStart(2, '0');
 
-        /* ---------- PAKIET NASTAWNI 24/7 ---------- */
-
-        // 1. Znikający kursor myszy (po 3 sekundach bezruchu)
         let mouseTimer;
         document.addEventListener('mousemove', () => {
             document.body.style.cursor = 'default';
@@ -295,19 +291,15 @@
             mouseTimer = setTimeout(() => { document.body.style.cursor = 'none'; }, 3000);
         });
 
-        // 2. Klawisz F11 - Pełny ekran dla całego panelu
         document.addEventListener('keydown', (e) => {
             if (e.key === 'F11') {
-                e.preventDefault(); // Blokujemy domyślne zachowanie przeglądarki
+                e.preventDefault();
                 if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen().catch(err => console.log(`Błąd pełnego ekranu: ${err.message}`));
-                } else {
-                    document.exitFullscreen();
-                }
+                    document.documentElement.requestFullscreen().catch(err => console.log(`Błąd: ${err.message}`));
+                } else document.exitFullscreen();
             }
         });
 
-        // Przycisk "Powiększ tylko ten panel" dla samego kafelka CEN
         function toggleCenFullscreen() {
             const elem = $('cen-card');
             if (!document.fullscreenElement) {
@@ -315,15 +307,12 @@
             } else document.exitFullscreen();
         }
 
-        // Obsługa wyciszenia dźwięku
         function updateSoundButton() {
             const btn = $('sound-toggle-btn');
             if (soundMuted) {
-                btn.innerText = '🔇 Dźwięk: WYŁ';
-                btn.className = 'muted';
+                btn.innerText = '🔇 Dźwięk: WYŁ'; btn.className = 'muted';
             } else {
-                btn.innerText = '🔊 Dźwięk: WŁ';
-                btn.className = 'secondary';
+                btn.innerText = '🔊 Dźwięk: WŁ'; btn.className = 'secondary';
             }
         }
         updateSoundButton();
@@ -335,15 +324,11 @@
             if (soundMuted && 'speechSynthesis' in window) window.speechSynthesis.cancel();
         }
 
-        // Zegarek, Data oraz 3. Nocny Twardy Reset (03:00)
         setInterval(() => { 
             const now = new Date();
-            
-            // Formatowanie czasu i daty
             $('clock').innerText = now.toLocaleTimeString('pl-PL', { timeZone: TZ }); 
             $('date-box').innerText = now.toLocaleDateString('pl-PL', { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit', timeZone: TZ });
             
-            // Twardy reset równo o 03:00:00 (zapobiega wyciekom pamięci z wykresów po wielu dniach pracy)
             if (now.getHours() === 3 && now.getMinutes() === 0 && now.getSeconds() === 0) {
                 window.location.reload(true);
             }
@@ -434,19 +419,24 @@
             document.title = 'PSE + Pogoda';
         }
 
-        // ---------- LOGIKA PEŁNYCH PROGÓW ----------
         function checkThresholdsAndAlert(price, period) {
             const card = $('cen-card');
             card.className = 'card'; 
             
             let alertType = null; let speechText = ''; let titleAlert = ''; let color = '';
 
-            if (price < -1000) {
-                color = '#2dd4bf'; card.classList.add('alarm-teal'); alertType = 'neg3';
-                speechText = `Ekstremalna cena ujemna w systemie! Wynosi ${Math.round(price)} złotych.`; titleAlert = `MINUS >1000: ${Math.round(price)} zł`;
+            if (price < -5000) {
+                color = '#c026d3'; card.classList.add('alarm-teal'); alertType = 'neg5';
+                speechText = `Krytyczna cena ujemna! Wynosi ${Math.round(price)} złotych.`; titleAlert = `MINUS >5000: ${Math.round(price)} zł`;
+            } else if (price < -2000) {
+                color = '#14b8a6'; card.classList.add('alarm-teal'); alertType = 'neg4';
+                speechText = `Ekstremalna cena ujemna w systemie! Wynosi ${Math.round(price)} złotych.`; titleAlert = `MINUS >2000: ${Math.round(price)} zł`;
+            } else if (price < -1000) {
+                color = '#06b6d4'; card.classList.add('alarm-teal'); alertType = 'neg3';
+                speechText = `Bardzo niska cena ujemna! Wynosi ${Math.round(price)} złotych.`; titleAlert = `MINUS >1000: ${Math.round(price)} zł`;
             } else if (price < -500) {
                 color = '#0ea5e9'; card.classList.add('alarm-sky'); alertType = 'neg2';
-                speechText = `Bardzo głęboka cena ujemna! Wynosi ${Math.round(price)} złotych.`; titleAlert = `MINUS >500: ${Math.round(price)} zł`;
+                speechText = `Głęboka cena ujemna. Wynosi ${Math.round(price)} złotych.`; titleAlert = `MINUS >500: ${Math.round(price)} zł`;
             } else if (price < -200) {
                 color = '#3b82f6'; card.classList.add('alarm-blue'); alertType = 'neg1';
                 speechText = `Uwaga. Znaczna cena ujemna! Wynosi ${Math.round(price)} złotych.`; titleAlert = `MINUS >200: ${Math.round(price)} zł`;
@@ -551,7 +541,7 @@
         /* ---------- KSE: dane na żywo z PV Index ---------- */
         async function refreshKse() {
             try {
-                const response = await fetch('https://pvindex.pl/api/v1/stats/pse-system/current', { cache: 'no-store' });
+                const response = await fetch('https://pse-kse-proxy.lewwraff.workers.dev/', { cache: 'no-store' });
                 if (!response.ok) throw new Error(`Błąd API: ${response.status}`);
                 const data = await response.json();
 
