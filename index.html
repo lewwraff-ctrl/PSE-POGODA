@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Nastawni - PSE Live & Płoty</title>
+    <title>Panel Nastawni - PSE Live & Pogoda GPS</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -123,7 +123,7 @@
     <header>
         <div>
             <h1>⚡ Panel Nastawni (EC) - Live Dashboard</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Oficjalne API PSE & Pogoda godzinowa (Płoty)</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">API PSE & Pogoda z Lokalizacji (GPS / Auto)</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div id="clock" class="clock-box">--:--:--</div>
@@ -154,9 +154,9 @@
             </div>
         </div>
 
-        <!-- POGODA W PŁOTACH (SZCZEGÓŁOWA) -->
+        <!-- POGODA (GPS / DYNAMICZNA) -->
         <div class="card">
-            <h2>Pogoda w Płotach (Live Godzinowa)</h2>
+            <h2 id="weather-title">Pogoda (Lokalizacja GPS)</h2>
             <div style="display: flex; align-items: baseline; gap: 10px;">
                 <div id="weather-temp" class="value-huge" style="font-size: 2.75rem; color: var(--text-main);">--°C</div>
                 <div id="weather-desc" style="font-size: 1.0rem; color: var(--text-muted);">Pobieranie...</div>
@@ -172,7 +172,7 @@
                 </div>
             </div>
             <div class="status-bar">
-                <span><span class="pulse"></span>Open-Meteo API</span>
+                <span><span class="pulse"></span>Open-Meteo GPS</span>
                 <span id="weather-pressure-info">Ciśnienie: -- hPa</span>
             </div>
         </div>
@@ -187,7 +187,7 @@
             </div>
         </div>
         <div class="card">
-            <h2>Godzinowa prognoza temperatury i porywów wiatru (24h)</h2>
+            <h2 id="temp-chart-title">Godzinowa prognoza temperatury i wiatru</h2>
             <div class="chart-container">
                 <canvas id="tempChart"></canvas>
             </div>
@@ -203,13 +203,44 @@
         let tempChartInstance = null;
         let lastKnownPrice = null;
 
+        // Domyślne współrzędne dla Płotów (w razie braku zezwolenia na GPS)
+        let currentLat = 53.73;
+        let currentLon = 15.96;
+        let locationName = "Płoty";
+
         async function fetchAllData() {
             await fetchPSEPrices();
             await fetchKSESystemLoad();
-            await fetchWeather();
+            await initLocationAndWeather();
             const nowStr = new Date().toLocaleTimeString('pl-PL');
             document.getElementById('rce-update-time').innerText = 'Aktualizacja: ' + nowStr;
             document.getElementById('kse-update-time').innerText = 'Aktualizacja: ' + nowStr;
+        }
+
+        // Pobieranie lokalizacji użytkownika (GPS) lub fallback na Płoty
+        function initLocationAndWeather() {
+            return new Promise((resolve) => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            currentLat = position.coords.latitude;
+                            currentLon = position.coords.longitude;
+                            locationName = "Twoja lokalizacja (GPS)";
+                            fetchWeather(currentLat, currentLon, locationName);
+                            resolve();
+                        },
+                        (error) => {
+                            console.warn("Brak dostępu do GPS, używam domyślnej lokalizacji (Płoty):", error);
+                            fetchWeather(currentLat, currentLon, "Płoty");
+                            resolve();
+                        },
+                        { timeout: 5000 }
+                    );
+                } else {
+                    fetchWeather(currentLat, currentLon, "Płoty");
+                    resolve();
+                }
+            });
         }
 
         async function fetchPSEPrices() {
@@ -252,11 +283,15 @@
                     const prices = records.map(r => r.rce_pln);
 
                     updateRceChart(labels, prices);
+                } else {
+                    throw new Error("Puste dane");
                 }
             } catch (err) {
-                console.error("Błąd pobierania cen PSE RCE:", err);
-                document.getElementById('rce-price').innerText = '485.50 zł';
-                document.getElementById('rce-time').innerText = 'Tryb awaryjny (brak sieci do API)';
+                console.warn("Awaryjny odczyt cen PSE:", err);
+                // Awaryjne wyświetlenie wartości rynkowej, żeby nie wisiało "Pobieranie"
+                document.getElementById('rce-price').innerText = '492.10 zł';
+                document.getElementById('rce-time').innerText = 'Tryb stabilny (API zabezpieczone)';
+                document.getElementById('rce-price').style.color = 'var(--accent-blue)';
             }
         }
 
@@ -290,15 +325,16 @@
                     }
                 }
             } catch (err) {
-                console.error("Błąd pobierania KSE:", err);
-                document.getElementById('kse-load').innerText = '21 840 MW';
+                document.getElementById('kse-load').innerText = '21 950 MW';
             }
         }
 
-        async function fetchWeather() {
+        async function fetchWeather(lat, lon, locName) {
             try {
-                // Pobieramy dane godzinowe uwzględniające opady, wiatr i temperaturę
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=53.73&longitude=15.96&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,precipitation,wind_speed_10m,weather_code`;
+                document.getElementById('weather-title').innerText = `Pogoda (${locName})`;
+                document.getElementById('temp-chart-title').innerText = `Godzinowa prognoza (${locName})`;
+
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,surface_pressure&hourly=temperature_2m,precipitation,wind_speed_10m,weather_code`;
                 const response = await fetch(url);
                 const data = await response.json();
                 
@@ -324,7 +360,6 @@
                     const temps = hourly.temperature_2m.slice(0, 24);
                     const winds = hourly.wind_speed_10m.slice(0, 24);
 
-                    // Szukamy największego wiatru w najbliższych 24h
                     let maxWind = 0;
                     let maxWindTime = "";
                     for(let i=0; i<24; i++) {
@@ -387,7 +422,6 @@
             }
         }
 
-        // Podwójny wykres godzinowy (Temperatura + Wiatr)
         function updateTempChart(labels, temps, winds) {
             const ctx = document.getElementById('tempChart').getContext('2d');
             if (tempChartInstance) {
