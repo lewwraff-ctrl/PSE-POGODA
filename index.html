@@ -332,10 +332,10 @@
         let titleInterval = null;
         let soundMuted = localStorage.getItem('pse_sound_muted') === 'true';
         let kseLastGoodMeasurementTime = null; 
-        let lastDailyReloadKey = null;
+        let lastDailyReloadKey = localStorage.getItem('pse_last_daily_reload_key') || null;
         let kseInFlight = false;
         let weatherInFlight = false;
-        let lastTrackedPrice = null; // Zmienna do wykrywania zmiany ceny
+        let lastTrackedPrice = null;
 
         const $ = id => document.getElementById(id);
         const pad = n => String(n).padStart(2, '0');
@@ -455,6 +455,7 @@
                 lastDailyReloadKey !== reloadKey
             ) {
                 lastDailyReloadKey = reloadKey;
+                localStorage.setItem('pse_last_daily_reload_key', reloadKey);
                 window.location.reload();
             }
         }, 1000);
@@ -472,14 +473,24 @@
             return `${pad(Math.floor(s / 60))}:${pad(s % 60)}–${end}`;
         }
 
-        async function getJson(url, ms = 15000) {
-            const c = new AbortController();
-            const t = setTimeout(() => c.abort(), ms);
+        async function fetchJsonWithTimeout(url, timeoutMs = 10000) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
             try {
-                const r = await fetch(url, { signal: c.signal, cache: 'no-store' });
-                if (!r.ok) throw new Error('HTTP ' + r.status);
-                return await r.json();
-            } finally { clearTimeout(t); }
+                const response = await fetch(url, {
+                    signal: controller.signal,
+                    cache: 'no-store'
+                });
+
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+
+                return await response.json();
+            } finally {
+                clearTimeout(timeoutId);
+            }
         }
         function explain(err) { return (err && err.name === 'TypeError') ? 'brak dostępu do sieci' : (err && err.name === 'AbortError') ? 'przekroczono czas oczekiwania' : String(err && err.message || err); }
 
@@ -487,7 +498,7 @@
             let url = PSE_API + endpoint + '?$filter=' + encodeURIComponent(`business_date eq '${businessDate}'`);
             const rows = [];
             for (let guard = 0; url && guard < 10; guard++) {
-                const json = await getJson(url);
+                const json = await fetchJsonWithTimeout(url, 15000);
                 rows.push(...(json.value || []));
                 url = json['@odata.nextLink'] || null;
             }
@@ -546,7 +557,7 @@
 
         function checkThresholdsAndAlert(price, period) {
             const card = $('cen-card');
-            card.className = 'card'; 
+            card.className = card.className.replace(/alarm-\w+/g, '').trim(); 
             
             let alertType = null; let speechText = ''; let titleAlert = ''; let color = '';
 
@@ -615,11 +626,10 @@
             const cenEl = $('cen-price');
             cenEl.innerText = fmt(last.cen);
             
-            // Wykrywanie zmiany ceny -> jednorazowe mignięcie kafelka
             if (lastTrackedPrice !== null && lastTrackedPrice !== last.cen) {
                 const card = $('cen-card');
                 card.classList.remove('flash-animation');
-                void card.offsetWidth; // reset reflow
+                void card.offsetWidth; 
                 card.classList.add('flash-animation');
             }
             lastTrackedPrice = last.cen;
@@ -707,10 +717,7 @@
                     const ep = endpoints[idx];
                     
                     try {
-                        const response = await fetch(ep.url, { cache: 'no-store' });
-                        if (!response.ok) continue;
-                        
-                        let j = await response.json();
+                        let j = await fetchJsonWithTimeout(ep.url, 10000);
                         if (j && j.contents && typeof j.contents === 'string') {
                             try { j = JSON.parse(j.contents); } catch(e){}
                         }
@@ -832,7 +839,7 @@
                 }
 
             } catch (error) {
-                console.error('Krytyczny błąd KSE (wszystkie źródła padły):', error);
+                console.error('Błąd odświeżania KSE:', error);
                 
                 $('kse-pulse').classList.remove('warn');
                 $('kse-pulse').classList.add('err');
@@ -892,7 +899,7 @@
 
         async function loadOpenMeteo() {
             const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m&hourly=temperature_2m,precipitation,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,pressure_msl&models=best_match&timezone=${encodeURIComponent(TZ)}&forecast_days=2`;
-            return getJson(url);
+            return fetchJsonWithTimeout(url, 15000);
         }
 
         function renderHourly(h, curTime) {
@@ -974,6 +981,7 @@
                 tempChart.data.datasets[0].pointHoverRadius = hoverRadii;
                 tempChart.data.datasets[0].weatherEmojis = emojis; 
                 tempChart.$currentHour = currentHour;
+                tempChart.$currentHourLabel = currentHour.slice(11, 13) + ':00';
 
                 tempChart.update('none');
                 return;
@@ -1049,10 +1057,8 @@
                             callbacks: {
                                 title: items => {
                                     if (!items.length) return '';
-                                    const latestCurrentTime = String(
-                                        tempChart.$currentHour || ''
-                                    );
-                                    return h.time[idx[items[0].dataIndex]]?.slice(0, 13) === latestCurrentTime
+                                    const currentLabel = tempChart.$currentHourLabel;
+                                    return items[0].label === currentLabel
                                         ? `${items[0].label} — AKTUALNA GODZINA`
                                         : items[0].label;
                                 }
@@ -1080,6 +1086,7 @@
             });
 
             tempChart.$currentHour = currentHour;
+            tempChart.$currentHourLabel = currentHour.slice(11, 13) + ':00';
         }
 
         async function refreshWeather() {
