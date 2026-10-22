@@ -127,8 +127,12 @@
         }
         .pulse { display: inline-block; width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; animation: pulse 2s infinite; margin-right: 6px; }
         .pulse.err { background: var(--accent-red); animation: none; }
+        .pulse.warn { background: var(--accent-orange); animation: none; }
         .err-text { color: var(--accent-red); }
+        .warn-text { color: var(--accent-orange); }
+        
         @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+        
         button { background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
         button:hover { background: #1d4ed8; }
         button.secondary { background: #334155; }
@@ -237,7 +241,6 @@
                         <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--accent-green);" id="kse-gen">--</td>
                     </tr>
                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
-                        <!-- ZAKTUALIZOWANA ETYKIETA -->
                         <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">SUMA PRZEPŁYWÓW NETTO</td>
                         <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--accent-orange);" id="kse-saldo">--</td>
                     </tr>
@@ -328,6 +331,7 @@
         let lastNotifiedPeriod = null; 
         let titleInterval = null;
         let soundMuted = localStorage.getItem('pse_sound_muted') === 'true';
+        let kseLastGoodMeasurementTime = null; // Zmienna dla pamięci ostatniego pomiaru
 
         const $ = id => document.getElementById(id);
         const pad = n => String(n).padStart(2, '0');
@@ -636,6 +640,7 @@
             try { const { series, date } = await loadRbPrices(); renderRbCard(series, date); renderRbChart(series); } catch (err) { renderRbError(err); }
         }
 
+        // ---------- KSE: LOGIKA Z WIEKIEM I PAMIĘCIĄ ----------
         async function refreshKse() {
             const proxyUrl = 'https://pse-kse-proxy.lewwraff.workers.dev/';
 
@@ -707,7 +712,6 @@
                 if (generation !== null) $('kse-gen').innerText = formatMW(generation);
                 if (saldo !== null) $('kse-saldo').innerText = saldo > 0 ? '+' + formatMW(saldo) : formatMW(saldo);
                 
-                // DYNAMICZNE KOLOROWANIE CZĘSTOTLIWOŚCI
                 if (frequency !== null) {
                     const freqEl = $('kse-freq');
                     
@@ -734,40 +738,97 @@
                 if (pv !== null) $('kse-pv').innerText = formatMW(pv);
                 if (other !== null) $('kse-other').innerText = formatMW(other);
 
+                // --- NOWA LOGIKA BŁĘDÓW I WIEKU DANYCH ---
                 const pulse = $('kse-pulse');
                 const status = $('kse-status');
-                const stale = values.stale === true;
-
-                pulse.classList.toggle('err', stale);
-                status.classList.toggle('err-text', stale);
-
-                if (stale) {
-                    status.innerText = 'PV Index: dane z kopii awaryjnej';
-                } else {
-                    status.innerText = 'PV Index: dane na żywo';
-                }
 
                 const timestamp = values.timestamp || values.created_at;
+                const timestampMs = timestamp ? Date.parse(timestamp) : NaN;
+                const validTimestamp = Number.isFinite(timestampMs);
 
-                $('kse-update-time').innerText = timestamp
-                    ? `Pomiar: ${new Date(timestamp).toLocaleTimeString(
-                        'pl-PL',
-                        { timeZone: 'Europe/Warsaw' }
-                    )}`
-                    : `Sprawdzono: ${nowStr()}`;
+                const ageMs = validTimestamp
+                    ? Date.now() - timestampMs
+                    : null;
+
+                const MAX_AGE_MS = 3 * 60 * 1000;
+                const FUTURE_TOLERANCE_MS = 60 * 1000;
+
+                const staleByAge =
+                    ageMs !== null &&
+                    (ageMs > MAX_AGE_MS || ageMs < -FUTURE_TOLERANCE_MS);
+
+                const stale = values.stale === true;
+
+                pulse.classList.remove('err', 'warn');
+                status.classList.remove('err-text', 'warn-text');
+
+                const measurementTime = validTimestamp
+                    ? new Date(timestampMs).toLocaleTimeString('pl-PL', {
+                        timeZone: 'Europe/Warsaw'
+                    })
+                    : null;
+
+                if (stale) {
+                    pulse.classList.add('warn');
+                    status.classList.add('warn-text');
+                    status.innerText = 'PV Index: dane z kopii awaryjnej';
+
+                } else if (!validTimestamp) {
+                    pulse.classList.add('warn');
+                    status.classList.add('warn-text');
+                    status.innerText = 'PV Index: brak czasu pomiaru';
+
+                } else if (ageMs < -FUTURE_TOLERANCE_MS) {
+                    pulse.classList.add('warn');
+                    status.classList.add('warn-text');
+                    status.innerText = 'PV Index: nieprawidłowy czas pomiaru';
+
+                } else if (staleByAge) {
+                    pulse.classList.add('warn');
+                    status.classList.add('warn-text');
+                    status.innerText = 'PV Index: pomiar opóźniony';
+
+                } else {
+                    status.innerText = 'PV Index: świeży pomiar';
+                }
+
+                if (measurementTime) {
+                    kseLastGoodMeasurementTime = measurementTime;
+
+                    const ageMinutes = Math.max(0, Math.floor(ageMs / 60000));
+                    const ageLabel = ageMinutes === 0
+                        ? 'poniżej 1 min'
+                        : `${ageMinutes} min`;
+
+                    $('kse-update-time').innerText =
+                        `Pomiar: ${measurementTime} · Wiek: ${ageLabel} · Sprawdzono: ${nowStr()}`;
+                } else {
+                    $('kse-update-time').innerText =
+                        `Brak czasu pomiaru · Sprawdzono: ${nowStr()}`;
+                }
 
                 console.log('KSE z PV Index:', {
                     demand, generation, saldo, frequency,
                     thermal, hydro, wind, pv, other,
-                    timestamp, stale
+                    timestamp, stale, ageMs
                 });
 
             } catch (error) {
                 console.error('Błąd KSE:', error);
+
+                // Nie kasujemy ostatnich wartości przy awarii. Ustawiamy komunikaty z pamięci
+                $('kse-pulse').classList.remove('warn');
                 $('kse-pulse').classList.add('err');
+                
+                $('kse-status').classList.remove('warn-text');
                 $('kse-status').classList.add('err-text');
-                $('kse-status').innerText = 'Błąd PV Index — ostatnie dane zachowane';
-                $('kse-update-time').innerText = explain(error);
+                
+                $('kse-status').innerText = 'Błąd pobierania — ostatnie dane zachowane';
+
+                $('kse-update-time').innerText =
+                    `${kseLastGoodMeasurementTime
+                        ? 'Ostatni pomiar: ' + kseLastGoodMeasurementTime + ' · '
+                        : ''}Błąd: ${explain(error)} · Sprawdzono: ${nowStr()}`;
             }
         }
 
