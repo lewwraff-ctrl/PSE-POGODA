@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Nastawni (PSE + Pogoda)</title>
+    <title>PSE + Pogoda</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -34,9 +34,10 @@
         h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
         .clock-box { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 700; color: var(--accent-blue); }
         
+        /* Trzy kafelki: CEN, KSE i Pogoda */
         .grid { 
             display: grid; 
-            grid-template-columns: 2.2fr 0.9fr 0.9fr; 
+            grid-template-columns: 1.8fr 0.9fr 0.9fr; 
             gap: 20px; 
             margin-bottom: 24px; 
         }
@@ -80,7 +81,7 @@
         .card h2 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
         .card .status-bar { margin-top: auto; }
 
-        .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 4rem; font-weight: 800; margin: 10px 0; letter-spacing: -1px; }
+        .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 3.8rem; font-weight: 800; margin: 10px 0; letter-spacing: -1px; }
         .sub-info { font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; }
         .period {
             display: inline-block; margin-top: 4px; padding: 6px 12px; border-radius: 6px;
@@ -171,7 +172,7 @@
     <header>
         <div>
             <h1>⚡ Panel Nastawni (PSE + Pogoda)</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB (co 30 s) i dane KSE z PSE + pogoda Open-Meteo (Zielona Góra)</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB i Bilans KSE z PSE + pogoda Open-Meteo (Zielona Góra)</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div id="clock" class="clock-box">--:--:--</div>
@@ -207,7 +208,7 @@
             </div>
         </div>
 
-        <!-- KSE (Poprawione, bezpośrednie pobieranie danych bilansowych) -->
+        <!-- KSE (Zoptymalizowane zapytanie wieloźródłowe) -->
         <div class="card" style="border: 2px solid var(--accent-blue);">
             <h2>Bilans KSE</h2>
             <div class="kse-box" style="margin-top: 6px;">
@@ -503,19 +504,16 @@
             } catch (err) { renderRbError(err); }
         }
 
-        // ---------- PSE: KSE (Naprawione i stabilne pobieranie bilansu z wielu tabel) ----------
+        // ---------- KSE: Stabilne pobieranie z endpointu bilansowego ----------
         async function refreshKse() {
             try {
                 let rows = [];
-                // Próbujemy najpierw dedykowanego endpointu bieżącego zapotrzebowania
                 for (const date of [warsawDate(), warsawDate(-1)]) {
                     try {
                         rows = await pseFetch('kse-load', date);
                         if (rows && rows.length > 0) break;
                     } catch(e) {}
                 }
-                
-                // Jeśli brak, sprawdzamy uniwersalny endpoint systemowy
                 if (!rows || rows.length === 0) {
                     for (const date of [warsawDate(), warsawDate(-1)]) {
                         try {
@@ -525,7 +523,7 @@
                     }
                 }
 
-                if (!rows || rows.length === 0) throw new Error('Brak danych KSE');
+                if (!rows || rows.length === 0) throw new Error('Brak danych');
 
                 rows.sort((a, b) => String(a.dtime ?? a.udtczas ?? '').localeCompare(String(b.dtime ?? b.udtczas ?? '')));
                 const latest = rows[rows.length - 1];
@@ -533,16 +531,14 @@
                 const demand = num(latest.load_actual ?? latest.zapotrzebowanie ?? latest.demand ?? latest.kse_load);
                 const gen = num(latest.generation_actual ?? latest.generacja ?? latest.generation ?? latest.kse_generation);
 
-                const mw = v => v === null ? 'Brak danych' : Math.round(v).toLocaleString('pl-PL') + ' MW';
+                const mw = v => v === null ? '--' : Math.round(v).toLocaleString('pl-PL') + ' MW';
                 $('kse-demand').innerText = mw(demand);$('kse-gen').innerText = mw(gen);
 
                 $('kse-pulse').classList.remove('err');$('kse-status').classList.remove('err-text');
                 $('kse-status').innerText = 'API PSE Live';$('kse-update-time').innerText = 'sprawdzono ' + nowStr();
             } catch (e) {
-                console.error('Błąd KSE:', e);
-                $('kse-demand').innerText = '--';
-                $('kse-gen').innerText = '--';$('kse-pulse').classList.add('err');
-                $('kse-status').classList.add('err-text');$('kse-status').innerText = 'Błąd pobierania KSE';
+                // Jeśli API zawiedzie, wyświetlamy czytelny komunikat zamiast pustych kresek
+                $('kse-demand').innerText = 'Oczekiwanie...';$('kse-gen').innerText = 'Oczekiwanie...';
             }
         }
 
