@@ -267,6 +267,30 @@
             </div>
         </div>
 
+        <!-- OFICJALNA MAPA KSE PSE: źródło odniesienia dla danych chwilowych i statusów -->
+        <div class="card dashboard-card" id="pse-live-map-card" draggable="true" style="border:2px solid var(--accent-green); grid-column: 1 / -1;">
+            <h2>Oficjalna mapa KSE — PSE</h2>
+            <p style="color:var(--text-muted);font-size:0.82rem;line-height:1.5;margin:0 0 10px;">
+                To osadzona strona PSE, na której są publikowane chwilowe wartości zapotrzebowania, generacji, saldo wymiany,
+                częstotliwość oraz statusy IGCC i PICASSO. To źródło referencyjne, gdy raporty API w kafelku powyżej są opóźnione.
+            </p>
+            <div style="border:1px solid rgba(128,128,128,.3);border-radius:10px;overflow:hidden;background:#fff;">
+                <iframe title="Oficjalna mapa KSE PSE" src="https://www.pse.pl/dane-systemowe"
+                    loading="lazy" referrerpolicy="strict-origin-when-cross-origin"
+                    style="display:block;width:100%;height:760px;border:0;background:#fff;"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation-by-user-activation">
+                </iframe>
+            </div>
+            <div class="status-bar" style="margin-top:10px;">
+                <span>Źródło: Polskie Sieci Elektroenergetyczne</span>
+                <a href="https://www.pse.pl/dane-systemowe" target="_blank" rel="noopener noreferrer" style="color:var(--accent-blue);font-weight:700;">Otwórz mapę PSE w nowej karcie ↗</a>
+            </div>
+            <p style="color:var(--text-muted);font-size:0.72rem;line-height:1.45;margin:8px 0 0;">
+                Jeśli PSE zablokuje wyświetlanie strony w ramce, użyj linku „Otwórz mapę PSE w nowej karcie”.
+                Własny kafelek API pozostaje widoczny, ale jego czas rekordu należy traktować jako część informacji o jakości danych.
+            </p>
+        </div>
+
         <!-- POGODA (Zgrabna, kompaktowa, z suwakiem na 36h) -->
         <div class="card dashboard-card" id="weather-card" draggable="true">
             <h2>Pogoda (Zielona Góra)</h2>
