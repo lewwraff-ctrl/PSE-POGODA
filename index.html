@@ -181,7 +181,7 @@
     </header>
 
     <div class="grid">
-        <!-- CEN Z WBUDOWANYM DUŻYM WYKRESEM -->
+        <!-- CEN -->
         <div class="card" id="cen-card" style="border: 2px solid var(--border-color);">
             <h2>
                 <span>Ceny na Rynku Bilansującym (RB)</span>
@@ -279,6 +279,7 @@
         </div>
     </div>
 
+    <!-- POGODA WYKRES DOLNY -->
     <div class="charts-grid">
         <div class="card">
             <h2>Temperatura godzinowa i opady - Zielona Góra</h2>
@@ -555,127 +556,129 @@
             try { const { series, date } = await loadRbPrices(); renderRbCard(series, date); renderRbChart(series); } catch (err) { renderRbError(err); }
         }
 
+        // ---------- KSE: ROZBUDOWANA OBSŁUGA WORKERA ----------
         async function refreshKse() {
             const proxyUrl = 'https://pse-kse-proxy.lewwraff.workers.dev/';
 
+            const numberOrNull = value => {
+                if (value === null || value === undefined || value === '') {
+                    return null;
+                }
+
+                const number = Number(value);
+                return Number.isFinite(number) ? number : null;
+            };
+
+            const formatMW = value => {
+                const number = numberOrNull(value);
+                return number === null
+                    ? '—'
+                    : `${Math.round(number).toLocaleString('pl-PL')} MW`;
+            };
+
             try {
-                const response = await fetch(proxyUrl, { cache: 'no-store' });
+                const response = await fetch(proxyUrl, {
+                    cache: 'no-store'
+                });
 
                 if (!response.ok) {
-                    throw new Error(`Błąd proxy: HTTP ${response.status}`);
+                    throw new Error(`HTTP ${response.status}`);
                 }
 
-                const result = await response.json();
+                const data = await response.json();
 
-                if (!Array.isArray(result.results)) {
-                    throw new Error('Nieprawidłowy format odpowiedzi PSE');
+                // Obsługa odpowiedzi PV Index bezpośrednio
+                // oraz odpowiedzi opakowanej przez Worker.
+                const values = data.data &&
+                    typeof data.data === 'object' &&
+                    !Array.isArray(data.data)
+                    ? { ...data, ...data.data }
+                    : data;
+
+                // Nie nadpisuj ostatnich dobrych pomiarów
+                // odpowiedzią błędną lub pustą.
+                const demand = numberOrNull(values.demand);
+                const generation = numberOrNull(values.generation);
+                const frequency = numberOrNull(values.frequency);
+
+                const flowKeys = [
+                    'flow_se',
+                    'flow_de',
+                    'flow_cz',
+                    'flow_sk',
+                    'flow_ua',
+                    'flow_lt'
+                ];
+
+                const flowValues = flowKeys
+                    .map(key => numberOrNull(values[key]))
+                    .filter(value => value !== null);
+
+                const hasAnyMeasurement =
+                    demand !== null ||
+                    generation !== null ||
+                    frequency !== null ||
+                    flowValues.length > 0;
+
+                if (!hasAnyMeasurement || values.error) {
+                    throw new Error('Brak poprawnych danych PV Index');
                 }
 
-                const generationResult = result.results.find(
-                    item => item.name === 'generation' && item.ok
-                );
+                // Bilans wymiany: suma przepływów zagranicznych.
+                const saldo = flowValues.length === flowKeys.length
+                    ? flowValues.reduce((sum, value) => sum + value, 0)
+                    : null;
 
-                const loadResult = result.results.find(
-                    item => item.name === 'load' && item.ok
-                );
+                if (demand !== null) {
+                    $('kse-demand').innerText = formatMW(demand);
+                }
 
-                const generationRow =
-                    generationResult?.data?.value?.[0] ?? null;
+                if (generation !== null) {
+                    $('kse-gen').innerText = formatMW(generation);
+                }
 
-                const loadRows = loadResult?.data?.value ?? [];
+                if (saldo !== null) {
+                    // Dodajemy znak '+' dla wartości dodatnich, żeby format pasował wizualnie
+                    $('kse-saldo').innerText = saldo > 0 ? '+' + formatMW(saldo) : formatMW(saldo);
+                }
 
-                const actualLoad = loadRows.find(
-                    row => row.load_actual !== null &&
-                           row.load_actual !== undefined
-                );
-
-                const forecastLoad = loadRows.find(
-                    row => row.load_fcst !== null &&
-                           row.load_fcst !== undefined
-                );
-
-                const numberOrNull = value => {
-                    if (value === null || value === undefined || value === '') {
-                        return null;
-                    }
-
-                    const number = Number(value);
-                    return Number.isFinite(number) ? number : null;
-                };
-
-                const formatMW = value => {
-                    const number = numberOrNull(value);
-
-                    return number === null
-                        ? '—'
-                        : `${Math.round(number).toLocaleString('pl-PL')} MW`;
-                };
-
-                // Rzeczywiste zapotrzebowanie z PSE
-                const demand = numberOrNull(actualLoad?.load_actual);
-
-                // Generacja tylko wtedy, gdy PSE rzeczywiście poda wartość.
-                const generation = numberOrNull(
-                    generationRow?.jg ??
-                    generationRow?.generation
-                );
-
-                // Prognoza nie jest pomiarem rzeczywistym.
-                const forecast = numberOrNull(forecastLoad?.load_fcst);
-
-                $('kse-demand').innerText = formatMW(demand);
-                $('kse-gen').innerText = formatMW(generation);
-
-                // Te wartości nie są zwracane przez obecne raporty Workera.
-                $('kse-saldo').innerText = '—';
-                $('kse-freq').innerText = '—';
+                if (frequency !== null) {
+                    $('kse-freq').innerText =
+                        `${frequency.toLocaleString('pl-PL', {
+                            minimumFractionDigits: 3,
+                            maximumFractionDigits: 3
+                        })} Hz`;
+                }
 
                 const pulse = $('kse-pulse');
                 const status = $('kse-status');
+                const stale = values.stale === true;
 
-                pulse.classList.remove('err');
-                status.classList.remove('err-text');
+                pulse.classList.toggle('err', stale);
+                status.classList.toggle('err-text', stale);
 
-                if (demand !== null) {
-                    status.innerText = 'PSE: zapotrzebowanie rzeczywiste';
-                } else if (forecast !== null) {
-                    status.innerText = 'PSE: dostępna tylko prognoza';
+                if (stale) {
+                    status.innerText = 'PV Index: dane z kopii awaryjnej';
                 } else {
-                    status.innerText = 'PSE: brak aktualnego pomiaru';
+                    status.innerText = 'PV Index: dane na żywo';
                 }
 
-                const measurementTime = actualLoad?.dtime;
+                const timestamp = values.timestamp || values.created_at;
 
-                $('kse-update-time').innerText = measurementTime
-                    ? `Pomiar: ${measurementTime}`
+                $('kse-update-time').innerText = timestamp
+                    ? `Pomiar: ${new Date(timestamp).toLocaleTimeString(
+                        'pl-PL',
+                        { timeZone: 'Europe/Warsaw' }
+                    )}`
                     : `Sprawdzono: ${nowStr()}`;
 
-                // Gdy zapotrzebowanie rzeczywiste jest niedostępne,
-                // pokaż prognozę w statusie, ale nie jako pomiar.
-                if (demand === null && forecast !== null) {
-                    status.innerText =
-                        `Prognoza PSE: ${Math.round(forecast).toLocaleString('pl-PL')} MW`;
-                }
-
-                console.log('Dane KSE z PSE:', {
-                    demand,
-                    forecast,
-                    generation,
-                    measurementTime,
-                    generationRow
-                });
-
             } catch (error) {
-                console.error('Błąd KSE Proxy:', error);
+                console.error('Błąd KSE:', error);
 
-                $('kse-demand').innerText = '—';
-                $('kse-gen').innerText = '—';
-                $('kse-saldo').innerText = '—';
-                $('kse-freq').innerText = '—';
-
+                // Nie kasujemy ostatnich wartości przy awarii.
                 $('kse-pulse').classList.add('err');
                 $('kse-status').classList.add('err-text');
-                $('kse-status').innerText = 'Błąd pobierania danych PSE';
+                $('kse-status').innerText = 'Błąd PV Index — ostatnie dane zachowane';
                 $('kse-update-time').innerText = explain(error);
             }
         }
