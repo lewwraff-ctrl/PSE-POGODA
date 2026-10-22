@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Nastawni - PSE Live</title>
+    <title>Panel Nastawni (PSE + Pogoda)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -34,7 +34,6 @@
         h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
         .clock-box { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 700; color: var(--accent-blue); }
         
-        /* Nowy układ: CEN zajmuje najwięcej miejsca, KSE i Pogoda są węższe i zbalansowane */
         .grid { 
             display: grid; 
             grid-template-columns: 2.2fr 0.9fr 0.9fr; 
@@ -82,7 +81,6 @@
         .card h2 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
         .card .status-bar { margin-top: auto; }
 
-        /* Gigantyczna i bardzo widoczna cena */
         .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 4rem; font-weight: 800; margin: 10px 0; letter-spacing: -1px; }
         .sub-info { font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; }
         .period {
@@ -142,7 +140,7 @@
             display: flex; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px;
         }
 
-        /* Tryb pełnoekranowy dla nastawni */
+        /* Tryb pełnoekranowy */
         #cen-card:fullscreen, #cen-card:-webkit-full-screen {
             background: var(--card-bg);
             padding: 40px;
@@ -174,8 +172,8 @@
 
     <header>
         <div>
-            <h1>⚡ Panel Nastawni (EC) - PSE Live</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB (co 30 s) i dane KSE (co 15 s) z PSE + pogoda Open-Meteo (Zielona Góra)</span>
+            <h1>⚡ Panel Nastawni (PSE + Pogoda)</h1>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB (co 30 s) i dane KSE z PSE + pogoda Open-Meteo (Zielona Góra)</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div id="clock" class="clock-box">--:--:--</div>
@@ -184,7 +182,7 @@
     </header>
 
     <div class="grid">
-        <!-- CEN (Bardzo szeroki i wyeksponowany kafelek) -->
+        <!-- CEN -->
         <div class="card" id="cen-card" style="border: 2px solid var(--accent-red);">
             <h2>
                 <span>Ceny na Rynku Bilansującym (RB)</span>
@@ -211,7 +209,7 @@
             </div>
         </div>
 
-        <!-- KSE (Zmniejszony kafelek ze stabilnym API mapy PSE) -->
+        <!-- KSE -->
         <div class="card" style="border: 2px solid var(--accent-blue);">
             <h2>Bilans KSE</h2>
             <div class="kse-box" style="margin-top: 6px;">
@@ -227,12 +225,12 @@
                 </table>
             </div>
             <div class="status-bar">
-                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">Mapa KSE</span></span>
+                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">API PSE</span></span>
                 <span id="kse-update-time">--</span>
             </div>
         </div>
 
-        <!-- POGODA (Zmniejszony kafelek) -->
+        <!-- POGODA -->
         <div class="card">
             <h2>Pogoda (Zielona Góra)</h2>
             <div class="wx-top">
@@ -270,7 +268,6 @@
 
     <script>
         const PSE_API = 'https://api.raporty.pse.pl/api/';
-        const KSE_SERVICE = 'https://www.pse.pl/transmissionMapService';
         const LAT = 51.9356, LON = 15.5065;
         const TZ = 'Europe/Warsaw';
         const PSE_REFRESH_MS = 30 * 1000;
@@ -278,6 +275,7 @@
         let rbChart = null;
         let tempChart = null;
         let lastNotifiedPeriod = null; 
+        let titleInterval = null;
 
         const $ = id => document.getElementById(id);
         const pad = n => String(n).padStart(2, '0');
@@ -380,33 +378,60 @@
             throw new Error('Brak danych RB (' + log.join('; ') + ')');
         }
 
+        // Migająca zakładka (tytuł strony) oraz obsługa progów
+        function flashBrowserTitle(alertText) {
+            if (titleInterval) clearInterval(titleInterval);
+            let toggle = false;
+            titleInterval = setInterval(() => {
+                document.title = toggle ? `⚠️ ${alertText}` : '⚡ Panel Nastawni (PSE + Pogoda)';
+                toggle = !toggle;
+            }, 1000);
+        }
+
+        function stopFlashTitle() {
+            if (titleInterval) {
+                clearInterval(titleInterval);
+                titleInterval = null;
+            }
+            document.title = '⚡ Panel Nastawni (PSE + Pogoda)';
+        }
+
         function checkThresholdsAndAlert(price, period) {
             const card = $('cen-card');
             card.classList.remove('alarm-red', 'alarm-orange', 'alarm-green');
 
             let alertType = null;
             let speechText = '';
+            let titleAlert = '';
 
             if (price <= 500) {
                 card.classList.add('alarm-green');
                 alertType = 'green';
                 speechText = `Uwaga! Cena CEN spadła do poziomu ${Math.round(price)} złotych w okresie ${period}`;
+                titleAlert = `NISKA CENA: ${Math.round(price)} zł`;
             } else if (price > 1000) {
                 card.classList.add('alarm-red');
                 alertType = 'red';
                 speechText = `Alarm! Wysoka cena CEN przekroczyła tysiąc złotych i wynosi ${Math.round(price)} złotych w okresie ${period}`;
+                titleAlert = `ALARM CENOWY: ${Math.round(price)} zł!`;
             } else if (price > 800) {
                 card.classList.add('alarm-orange');
                 alertType = 'orange';
                 speechText = `Ostrzeżenie. Cena CEN wzrosła powyżej osiemset złotych i wynosi ${Math.round(price)} złotych w okresie ${period}`;
+                titleAlert = `WYSOKA CENA: ${Math.round(price)} zł`;
+            } else {
+                stopFlashTitle();
             }
 
-            if (alertType && lastNotifiedPeriod !== `${period}_${Math.round(price)}`) {
-                lastNotifiedPeriod = `${period}_${Math.round(price)}`;
-                if ('speechSynthesis' in window) {
-                    const msg = new SpeechSynthesisUtterance(speechText);
-                    msg.lang = 'pl-PL';
-                    window.speechSynthesis.speak(msg);
+            if (alertType) {
+                flashBrowserTitle(titleAlert);
+                if (lastNotifiedPeriod !== `${period}_${Math.round(price)}`) {
+                    lastNotifiedPeriod = `${period}_${Math.round(price)}`;
+                    if ('speechSynthesis' in window) {
+                        const msg = new SpeechSynthesisUtterance(speechText);
+                        msg.lang = 'pl-PL';
+                        window.speechSynthesis.speak(msg);
+                    }
                 }
             }
         }
@@ -481,32 +506,35 @@
             } catch (err) { renderRbError(err); }
         }
 
-        // ---------- PSE: KSE (Stabilny podgląd z transmissionMapService) ----------
-        function numPl(v) {
-            if (v === null || v === undefined || v === '') return null;
-            if (typeof v === 'string') v = v.replace(/\s/g, '').replace(',', '.');
-            const n = Number(v);
-            return isNaN(n) ? null : n;
-        }
-        function pickPl(o, keys) {
-            for (const k of keys) if (o && o[k] !== undefined && o[k] !== null) return numPl(o[k]);
-            return null;
-        }
-
+        // ---------- PSE: KSE (Automatyczne sprawdzanie raportów) ----------
         async function refreshKse() {
             try {
-                const j = await getJson(KSE_SERVICE);
-                const s = j && j.data && j.data.podsumowanie;
-                if (!s) throw new Error('nieoczekiwany format odpowiedzi');
+                let rows = [];
+                for (const date of [warsawDate(), warsawDate(-1)]) {
+                    rows = await pseFetch('kse-load', date);
+                    if (rows && rows.length > 0) break;
+                }
                 
-                const demand = pickPl(s, ['zapotrzebowanie']);
-                const gen = pickPl(s, ['generacja']);
+                if (!rows || rows.length === 0) {
+                    for (const date of [warsawDate(), warsawDate(-1)]) {
+                        rows = await pseFetch('his-wlk-cal', date);
+                        if (rows && rows.length > 0) break;
+                    }
+                }
+
+                if (!rows || rows.length === 0) throw new Error('Brak danych KSE');
+
+                rows.sort((a, b) => String(a.dtime ?? a.udtczas ?? '').localeCompare(String(b.dtime ?? b.udtczas ?? '')));
+                const latest = rows[rows.length - 1];
+
+                const demand = num(latest.load_actual ?? latest.zapotrzebowanie ?? latest.demand);
+                const gen = num(latest.generation_actual ?? latest.generacja ?? latest.generation);
 
                 const mw = v => v === null ? '--' : Math.round(v).toLocaleString('pl-PL');
                 $('kse-demand').innerText = mw(demand);$('kse-gen').innerText = mw(gen);
 
                 $('kse-pulse').classList.remove('err');$('kse-status').classList.remove('err-text');
-                $('kse-status').innerText = 'Mapa KSE (Live)';$('kse-update-time').innerText = 'sprawdzono ' + nowStr();
+                $('kse-status').innerText = 'API PSE (kse-load)';$('kse-update-time').innerText = 'sprawdzono ' + nowStr();
             } catch (e) {
                 console.error('Błąd KSE:', e);
                 $('kse-pulse').classList.add('err');
@@ -520,7 +548,7 @@
             45: ['Mgła', '🌫️'], 61: ['Lekki deszcz', '🌦️'], 63: ['Deszcz', '🌧️'], 71: ['Lekki śnieg', '🌨️'], 73: ['Śnieg', '❄️'], 95: ['Burza', '⛈️']
         };
         const wmo = c => WMO[c] || ['—', '·'];
-        const HOURLY_CELLS = 8; // Mniejsza liczba godzin pasująca do węższego kafelka
+        const HOURLY_CELLS = 8;
 
         function compass(deg) {
             if (deg === null || deg === undefined || isNaN(deg)) return '';
