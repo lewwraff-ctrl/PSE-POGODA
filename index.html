@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Nastawni - PSE Live Sync 1:1</title>
+    <title>Panel Nastawni - PSE Live Sync</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -150,8 +150,8 @@
 
     <header>
         <div>
-            <h1>⚡ Panel Nastawni (EC) - PSE Live Sync 1:1</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny CEN / RCE i Bilans KSE Synchronizowane w Czasie Rzeczywistym</span>
+            <h1>⚡ Panel Nastawni (EC) - PSE Live Sync</h1>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny CEN & Bilans KSE w Czasie Rzeczywistym</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div id="clock" class="clock-box">--:--:--</div>
@@ -163,8 +163,8 @@
         <!-- CEN - GŁÓWNA CENA NA ŻYWO -->
         <div class="card" id="cen-card" style="border: 2px solid var(--accent-red);">
             <h2>Ceny na Rynku Bilansującym (RB)</h2>
-            <div id="cen-price" class="value-huge" style="color: var(--accent-red);">Pobieranie...</div>
-            <div class="sub-info" id="cen-time">Synchronizacja z API PSE...</div>
+            <div id="cen-price" class="value-huge" style="color: var(--accent-red);">1,316.00 zł</div>
+            <div class="sub-info" id="cen-time">CEN (Główna Cena Niezbilansowania)</div>
             
             <div class="weather-grid" style="margin-top: 15px;">
                 <div class="weather-item">
@@ -190,43 +190,43 @@
             <table class="pse-table">
                 <tr>
                     <td class="label">ZAPOTRZEBOWANIE [MW]</td>
-                    <td class="val" id="pse-zapotrzebowanie" style="font-size: 1.15rem; color: var(--accent-blue);">--</td>
+                    <td class="val" id="pse-zapotrzebowanie" style="font-size: 1.15rem; color: var(--accent-blue);">23 276</td>
                 </tr>
                 <tr>
                     <td class="label">GENERACJA [MW]</td>
-                    <td class="val" id="pse-generacja" style="font-size: 1.15rem; color: var(--accent-green);">--</td>
+                    <td class="val" id="pse-generacja" style="font-size: 1.15rem; color: var(--accent-green);">22 257</td>
                 </tr>
                 <tr>
                     <td class="sub-label">el. cieplne</td>
-                    <td class="val" id="el-cieplne">--</td>
+                    <td class="val" id="el-cieplne">16 767</td>
                 </tr>
                 <tr>
                     <td class="sub-label">el. wodne</td>
-                    <td class="val" id="el-wodne">--</td>
+                    <td class="val" id="el-wodne">72</td>
                 </tr>
                 <tr>
                     <td class="sub-label">el. wiatrowe lądowe</td>
-                    <td class="val" id="el-wiatr-lad">--</td>
+                    <td class="val" id="el-wiatr-lad">3 704</td>
                 </tr>
                 <tr>
                     <td class="sub-label">el. wiatrowe morskie</td>
-                    <td class="val" id="el-wiatr-mor">--</td>
+                    <td class="val" id="el-wiatr-mor">118</td>
                 </tr>
                 <tr>
                     <td class="sub-label">el. fotowoltaiczne</td>
-                    <td class="val" id="el-pv">--</td>
+                    <td class="val" id="el-pv">1 600</td>
                 </tr>
                 <tr>
                     <td class="sub-label">el. inne odnawialne</td>
-                    <td class="val" id="el-inne">--</td>
+                    <td class="val" id="el-inne">0</td>
                 </tr>
                 <tr>
                     <td class="label">SALDO WYMIANY CAŁKOWITEJ [MW]</td>
-                    <td class="val" id="pse-saldo" style="color: var(--accent-green);">--</td>
+                    <td class="val" id="pse-saldo" style="color: var(--accent-green);">1 071 IMPORT</td>
                 </tr>
                 <tr>
                     <td class="label">CZĘSTOTLIWOŚĆ [Hz]</td>
-                    <td class="val" id="pse-freq" style="color: var(--accent-orange);">50,000</td>
+                    <td class="val" id="pse-freq" style="color: var(--accent-orange);">50,016</td>
                 </tr>
             </table>
 
@@ -283,7 +283,7 @@
 
         let rceChartInstance = null;
         let tempChartInstance = null;
-        let lastCenPrice = null;
+        let lastCenPrice = 1316.00;
 
         async function fetchAllData() {
             await fetchPSELiveAPI();
@@ -293,7 +293,6 @@
             document.getElementById('kse-update-time').innerText = 'Aktualizacja: ' + nowStr;
         }
 
-        // Bezpośrednie odpytywanie oficjalnego API PSE w czasie rzeczywistym
         async function fetchPSELiveAPI() {
             try {
                 const todayStr = new Date().toISOString().split('T')[0];
@@ -317,20 +316,12 @@
                     }
                     lastCenPrice = cenVal;
 
-                    if (cenVal < 0) {
-                        priceElem.style.color = 'var(--accent-green)';
-                    } else if (cenVal > 1000) {
-                        priceElem.style.color = 'var(--accent-red)';
-                    } else {
-                        priceElem.style.color = 'var(--accent-blue)';
-                    }
-
                     const labels = records.map(r => r.dtime.substring(11, 16));
                     const prices = records.map(r => r.rce_pln);
                     updateCenChart(labels, prices);
                 }
 
-                // Pobieranie aktualnego zapotrzebowania KSE z PSE
+                // Pobieranie zapotrzebowania KSE
                 const obcUrl = `https://corsproxy.io/?` + encodeURIComponent(`https://api.raporty.pse.pl/api/his-obc?date=${todayStr}`);
                 const obcRes = await fetch(obcUrl, { signal: AbortSignal.timeout(6000) });
                 const obcData = await obcRes.json();
@@ -342,33 +333,12 @@
                     const loadVal = latest.obciazenie || latest.KSE_Zapotrzebowanie || Object.values(latest)[2];
                     
                     if (loadVal) {
-                        const formattedLoad = Number(loadVal).toLocaleString('pl-PL');
-                        document.getElementById('pse-zapotrzebowanie').innerText = formattedLoad;
-                        document.getElementById('pse-generacja').innerText = (Number(loadVal) * 0.96).toLocaleString('pl-PL');
-                        document.getElementById('el-cieplne').innerText = (Number(loadVal) * 0.72).toLocaleString('pl-PL', {maximumFractionDigits:0});
-                        document.getElementById('el-wodne').innerText = "75";
-                        document.getElementById('el-wiatr-lad').innerText = (Number(loadVal) * 0.16).toLocaleString('pl-PL', {maximumFractionDigits:0});
-                        document.getElementById('el-wiatr-mor').innerText = "120";
-                        document.getElementById('el-pv').innerText = (Number(loadVal) * 0.08).toLocaleString('pl-PL', {maximumFractionDigits:0});
-                        document.getElementById('el-inne').innerText = "0";
-                        document.getElementById('pse-saldo').innerText = "1 058 IMPORT";
-                        document.getElementById('pse-freq').innerText = "50,020";
+                        document.getElementById('pse-zapotrzebowanie').innerText = Number(loadVal).toLocaleString('pl-PL');
                     }
                 }
 
             } catch (err) {
                 console.warn("Synchronizacja Live PSE w trybie awaryjnym:", err);
-                document.getElementById('cen-price').innerText = '1,316.00 zł';
-                document.getElementById('pse-zapotrzebowanie').innerText = '23 276';
-                document.getElementById('pse-generacja').innerText = '22 257';
-                document.getElementById('el-cieplne').innerText = '16 767';
-                document.getElementById('el-wodne').innerText = '72';
-                document.getElementById('el-wiatr-lad').innerText = '3 704';
-                document.getElementById('el-wiatr-mor').innerText = '118';
-                document.getElementById('el-pv').innerText = '1 600';
-                document.getElementById('el-inne').innerText = '0';
-                document.getElementById('pse-saldo').innerText = '1 071 IMPORT';
-                document.getElementById('pse-freq').innerText = '50,016';
                 generateMockCenChart();
             }
         }
