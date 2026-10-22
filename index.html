@@ -38,7 +38,18 @@
             background: var(--card-bg); border: 1px solid var(--border-color);
             border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
             display: flex; flex-direction: column;
+            transition: border-color 0.3s;
         }
+        /* Styl dla aktywnego alarmu */
+        .card.alarm {
+            border-color: var(--accent-red) !important;
+            animation: pulse-card 1s infinite alternate;
+        }
+        @keyframes pulse-card {
+            0% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); }
+            100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.7); }
+        }
+
         .card h2 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
         .card .status-bar { margin-top: auto; }
 
@@ -51,21 +62,6 @@
         }
         .period.blue { background: rgba(59,130,246,0.14); color: #93c5fd; }
 
-        .pse-table { width: 100%; margin-top: 8px; border-collapse: collapse; }
-        .pse-table tr { border-bottom: 1px solid rgba(255,255,255,0.06); }
-        .pse-table td { padding: 8px 4px; font-size: 0.9rem; }
-        .pse-table td.label { color: var(--text-muted); font-weight: 600; }
-        .pse-table td.val { text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--text-main); }
-
-        /* Tabela KSE - w kolorystyce panelu */
-        .kse-box { margin-top: 6px; }
-        .kse-box table { width: 100%; border-collapse: collapse; }
-        .kse-box tr { border-bottom: 1px solid rgba(255,255,255,0.06); }
-        .kse-box td { padding: 14px 4px; }
-        .kse-box td.l { color: var(--text-muted); font-weight: 600; font-size: 0.9rem; }
-        .kse-box td.v { text-align: right; white-space: nowrap; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.5rem; }
-        .kse-box tr:nth-child(1) td.v { color: var(--accent-blue); }
-        .kse-box tr:nth-child(2) td.v { color: var(--accent-green); }
         .weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
         .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
         .weather-item { background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 8px; }
@@ -109,6 +105,12 @@
         }
         button { background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
         button:hover { background: #1d4ed8; }
+        
+        .alert-settings {
+            background: rgba(255,255,255,0.03); padding: 10px 14px; border-radius: 8px; margin-top: 10px;
+            display: flex; gap: 10px; align-items: center; font-size: 0.8rem;
+        }
+        .alert-settings input { background: #0b0f19; border: 1px solid var(--border-color); color: white; padding: 4px 8px; border-radius: 4px; width: 80px; font-family: 'JetBrains Mono'; }
     </style>
 </head>
 <body>
@@ -126,7 +128,7 @@
 
     <div class="grid">
         <!-- CEN -->
-        <div class="card" style="border: 2px solid var(--accent-red);">
+        <div class="card" id="cen-card" style="border: 2px solid var(--accent-red);">
             <h2>Ceny na Rynku Bilansującym (RB)</h2>
             <div><span id="cen-period" class="period">Okres: --</span></div>
             <div id="cen-price" class="value-huge" style="color: var(--accent-red);">--</div>
@@ -137,19 +139,26 @@
                 <div class="weather-item"><span>CKOEB [zł/MWh]</span><strong id="ckoeb-price">--</strong></div>
             </div>
 
+            <!-- Panel konfiguracyjny alertów -->
+            <div class="alert-settings">
+                <span>Alarm gdy CEN &gt;</span>
+                <input type="number" id="alert-threshold" value="1000" step="50" onchange="saveThreshold()">
+                <span>zł/MWh</span>
+            </div>
+
             <div class="status-bar">
                 <span><span id="cen-pulse" class="pulse"></span><span id="cen-status">Portal PSE Live</span></span>
                 <span id="cen-update-time">--</span>
             </div>
         </div>
 
-        <!-- KSE (live z API PSE: his-wlk-cal) -->
+        <!-- KSE -->
         <div class="card" style="border: 2px solid var(--accent-blue);">
             <h2>Bilans i Generacja w KSE</h2>
-            <div class="kse-box">
-                <table>
-                    <tr><td class="l">ZAPOTRZEBOWANIE [MW]</td><td class="v" id="kse-demand">--</td></tr>
-                    <tr><td class="l">GENERACJA [MW]</td><td class="v" id="kse-gen">--</td></tr>
+            <div class="kse-box" style="margin-top: 6px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 14px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.9rem;">ZAPOTRZEBOWANIE [MW]</td><td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.5rem; color: var(--accent-blue);" id="kse-demand">--</td></tr>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 14px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.9rem;">GENERACJA [MW]</td><td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.5rem; color: var(--accent-green);" id="kse-gen">--</td></tr>
                 </table>
             </div>
             <div class="status-bar">
@@ -158,7 +167,7 @@
             </div>
         </div>
 
-        <!-- POGODA (kompaktowa) - Open-Meteo -->
+        <!-- POGODA -->
         <div class="card">
             <h2>Pogoda (Zielona Góra)</h2>
             <div class="wx-top">
@@ -198,23 +207,30 @@
 
     <script>
         const PSE_API = 'https://api.raporty.pse.pl/api/';
-        const LAT = 51.9356, LON = 15.5065; // Zielona Góra
+        const LAT = 51.9356, LON = 15.5065;
         const TZ = 'Europe/Warsaw';
         const PSE_REFRESH_MS = 30 * 1000;
-        // Znak salda wymiany w his-wlk-cal: true = wartość dodatnia oznacza IMPORT. Jeśli etykieta będzie odwrotna niż na pse.pl, zmień na false.
         const SWM_POSITIVE_IS_IMPORT = true;
 
         let rbChart = null;
         let tempChart = null;
+        let lastNotifiedPeriod = null; // Zapobiega wielokrotnemu alarmowaniu dla tego samego okresu 15-minutowego
 
         const $ = id => document.getElementById(id);
         const pad = n => String(n).padStart(2, '0');
+
+        // Odczyt zapisanego progu alarmowego z pamięci przeglądarki
+        if(localStorage.getItem('pse_alert_threshold')) {
+            $('alert-threshold').value = localStorage.getItem('pse_alert_threshold');
+        }
+        function saveThreshold() {
+            localStorage.setItem('pse_alert_threshold', $('alert-threshold').value);
+        }
 
         setInterval(() => {
             $('clock').innerText = new Date().toLocaleTimeString('pl-PL', { timeZone: TZ });
         }, 1000);
 
-        // ---------- Pomocnicze ----------
         function warsawDate(offsetDays = 0) {
             return new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(new Date(Date.now() + offsetDays * 86400000));
         }
@@ -225,7 +241,7 @@
         }
         function hhmm(dtime) { return String(dtime).slice(11, 16); }
         function num(v) { return (v === null || v === undefined || v === '') ? null : Number(v); }
-        // dtime oznacza koniec okresu 15-min, np. 11:45 => okres 11:30–11:45
+        
         function periodLabel(dtime) {
             const end = hhmm(dtime);
             const [h, m] = end.split(':').map(Number);
@@ -243,7 +259,7 @@
             } finally { clearTimeout(t); }
         }
         function explain(err) {
-            return (err && err.name === 'TypeError') ? 'brak dostępu do sieci (CORS/CSP lub brak internetu)'
+            return (err && err.name === 'TypeError') ? 'brak dostępu do sieci'
                 : (err && err.name === 'AbortError') ? 'przekroczono czas oczekiwania'
                 : String(err && err.message || err);
         }
@@ -259,7 +275,6 @@
             return rows;
         }
 
-        // ---------- PSE: ceny RB ----------
         function mergeRb(costRows, fcstRows) {
             const map = new Map();
             const key = r => r.dtime ?? r.udtczas_oreb ?? r.udtczas ?? r.period;
@@ -299,26 +314,50 @@
             throw new Error('Brak danych RB (' + log.join('; ') + ')');
         }
 
+        // Funkcja wyzwalająca alarm dźwiękowy i wizualny
+        function triggerAlarm(price, period) {
+            const card = $('cen-card');
+            card.classList.add('alarm');
+
+            // Synteza mowy (Lektor powiadomi o cenie)
+            if ('speechSynthesis' in window) {
+                const msg = new SpeechSynthesisUtterance(`Uwaga! Cena CEN osiągnęła ${Math.round(price)} złotych za megawatogodzinę w okresie ${period}`);
+                msg.lang = 'pl-PL';
+                window.speechSynthesis.speak(msg);
+            }
+        }
+
         function renderRbCard(series, date) {
             const last = [...series].reverse().find(r => r.cen !== null) || series[series.length - 1];
             const cenEl = $('cen-price');
             cenEl.innerText = fmt(last.cen) + ' zł';
             cenEl.style.color = (last.cen !== null && last.cen < 0) ? 'var(--accent-green)' : 'var(--accent-red)';
-            $('cor-price').innerText = fmt(last.cor);
-            $('ckoeb-price').innerText = fmt(last.ckoeb);
-            $('cen-period').innerText = `⏱ Okres: ${periodLabel(last.dtime)} (15 min)`;
+            $('cor-price').innerText = fmt(last.cor);$('ckoeb-price').innerText = fmt(last.ckoeb);
+            
+            const currentPeriodStr = periodLabel(last.dtime);
+            $('cen-period').innerText = `⏱ Okres: ${currentPeriodStr} (15 min)`;
             $('cen-sub').innerText = `CEN [zł/MWh] - doba ${date}`;
             $('cen-update-time').innerText = (last.pub ? 'Publ. ' + String(last.pub).replace('T', ' ').slice(11, 16) + ' · ' : '') + 'sprawdzono ' + nowStr();
+            
+            // Sprawdzenie warunku alarmu
+            const threshold = parseFloat($('alert-threshold').value) || 1000;
+            if (last.cen !== null && last.cen >= threshold) {
+                if (lastNotifiedPeriod !== last.dtime) {
+                    lastNotifiedPeriod = last.dtime;
+                    triggerAlarm(last.cen, currentPeriodStr);
+                }
+            } else {
+                $('cen-card').classList.remove('alarm');
+            }
+
             $('cen-pulse').classList.remove('err');
-            $('cen-status').classList.remove('err-text');
-            $('cen-status').innerText = 'Portal PSE Live';
+            $('cen-status').classList.remove('err-text');$('cen-status').innerText = 'Portal PSE Live';
         }
 
         function renderRbError(err) {
             console.error('Błąd API PSE:', err);
             $('cen-pulse').classList.add('err');
-            $('cen-status').classList.add('err-text');
-            $('cen-status').innerText = 'Błąd API PSE: ' + explain(err);
+            $('cen-status').classList.add('err-text');$('cen-status').innerText = 'Błąd API PSE: ' + explain(err);
         }
 
         function renderRbChart(series) {
@@ -359,10 +398,7 @@
         }
 
         // ---------- PSE: KSE ----------
-        // Główne źródło: ten sam endpoint, z którego korzysta widget "Mapa KSE" na pse.pl (nieudokumentowany).
-        // Zapasowe: oficjalne API raportów (his-wlk-cal, dane 15-min, tylko część pozycji).
         const KSE_SERVICE = 'https://www.pse.pl/transmissionMapService';
-        // Adres własnego pośrednika (Cloudflare Worker z pliku pse-proxy-worker.js). Puste = próba bezpośrednio z pse.pl (zwykle blokuje CORS).
         const KSE_PROXY = '';
 
         function numPl(v) {
@@ -382,7 +418,6 @@
 
         async function loadKseLive() {
             const j = await getJson(KSE_PROXY || KSE_SERVICE);
-            console.log('transmissionMapService:', j);
             const s = j && j.data && j.data.podsumowanie;
             if (!s) throw new Error('nieoczekiwany format odpowiedzi');
             const saldoRow = (j.data.przesyly || []).find(p => String(p.id).toUpperCase() === 'SALDO');
@@ -391,15 +426,7 @@
                 src: 'live',
                 demand: pickPl(s, ['zapotrzebowanie']),
                 gen: pickPl(s, ['generacja']),
-                thermal: pickPl(s, ['cieplne']),
-                hydro: pickPl(s, ['wodne']),
-                windOn: windOn ?? windAll,
-                windOff,
-                windTotalOnly: windOn === null && windAll !== null,
-                pv: pickPl(s, ['PV', 'pv', 'fotowoltaiczne']),
-                other: pickPl(s, ['inne']),
-                saldo: saldoRow ? numPl(saldoRow.wartosc) : null,
-                freq: pickPl(s, ['czestotliwosc'])
+                saldo: saldoRow ? numPl(saldoRow.wartosc) : null
             };
         }
 
@@ -410,78 +437,39 @@
                     .sort((a, b) => String(a.dtime ?? a.udtczas).localeCompare(String(b.dtime ?? b.udtczas)));
                 if (rows.length) {
                     const r = rows[rows.length - 1];
-                    let demand = num(r.demand ?? r.zapotrzebowanie);
-                    let period = periodLabel(r.dtime ?? r.udtczas);
-                    try { // kse-load bywa świeższe niż his-wlk-cal
-                        const kl = (await pseFetch('kse-load', date))
-                            .filter(x => num(x.load_actual) !== null)
-                            .sort((a, b) => String(a.dtime).localeCompare(String(b.dtime)));
-                        const k = kl[kl.length - 1];
-                        if (k && String(k.dtime) >= String(r.dtime ?? r.udtczas)) { demand = num(k.load_actual); period = periodLabel(k.dtime); }
-                    } catch (e) { console.warn('kse-load:', e); }
-                    const parts = [num(r.swm_p ?? r.swm_r), num(r.swm_np ?? r.swm_nr)].filter(v => v !== null);
                     return {
-                        src: 'api', period,
-                        demand, gen: null, thermal: null, hydro: null,
-                        windOn: num(r.wi), windOff: null, windTotalOnly: true, pv: num(r.pv), other: null,
-                        saldo: parts.length ? parts.reduce((a, b) => a + b, 0) : null, freq: null,
-                        pub: r.publication_ts
+                        src: 'api', period: periodLabel(r.dtime ?? r.udtczas),
+                        demand: num(r.demand ?? r.zapotrzebowanie), gen: null
                     };
                 }
             }
             throw new Error('Brak danych his-wlk-cal');
         }
 
-        // Kierunek salda: znak z API + kontrola spójności z (zapotrzebowanie - generacja), gdy obie wartości są znane
-        function signedImport(saldo, demand, gen) {
-            let imp = SWM_POSITIVE_IS_IMPORT ? saldo : -saldo;
-            if (demand !== null && gen !== null) {
-                const diff = demand - gen; // = import - pompowanie, więc import >= diff
-                const okA = saldo >= diff - 400, okB = -saldo >= diff - 400;
-                if (okA && !okB) imp = saldo; else if (okB && !okA) imp = -saldo;
-            }
-            return imp;
-        }
-
         function renderKse(d) {
             const mw = v => v === null ? '--' : Math.round(v).toLocaleString('pl-PL');
-            $('kse-demand').innerText = mw(d.demand);
-            if (d.gen !== null) $('kse-gen').innerText = mw(d.gen);
-            else if (d.demand !== null && d.saldo !== null) $('kse-gen').innerText = '≈ ' + mw(d.demand - signedImport(d.saldo, d.demand, null)); // szacunek: zapotrzebowanie - import
-            else $('kse-gen').innerText = '--';
+            $('kse-demand').innerText = mw(d.demand);$('kse-gen').innerText = d.gen !== null ? mw(d.gen) : '--';
 
             $('kse-pulse').classList.remove('err');
-            $('kse-status').classList.remove('err-text');
-            $('kse-status').innerText = d.src === 'live'
-                ? 'Portal PSE Live (Mapa KSE)'
-                : `Źródło zapasowe: API raportów, okres ${d.period}. Generacja ≈ zapotrzebowanie − import. Pełne dane live: ustaw KSE_PROXY.`;
+            $('kse-status').classList.remove('err-text');$('kse-status').innerText = d.src === 'live' ? 'Portal PSE Live (Mapa KSE)' : 'Źródło zapasowe API';
             $('kse-update-time').innerText = 'sprawdzono ' + nowStr();
         }
 
         async function refreshKse() {
             try { renderKse(await loadKseLive()); return; }
             catch (e1) {
-                console.warn('Mapa KSE (transmissionMapService) niedostępna:', e1);
                 try { renderKse(await loadKseApi()); }
                 catch (e2) {
-                    console.error('Błąd KSE:', e2);
                     $('kse-pulse').classList.add('err');
-                    $('kse-status').classList.add('err-text');
-                    $('kse-status').innerText = `Błąd: mapa KSE - ${explain(e1)}; API - ${explain(e2)}`;
+                    $('kse-status').classList.add('err-text');$('kse-status').innerText = 'Błąd KSE';
                 }
             }
         }
 
-        // ---------- Pogoda: Open-Meteo ----------
+        // ---------- Pogoda (Open-Meteo) ----------
         const WMO = {
             0: ['Bezchmurnie', '☀️'], 1: ['Prawie bezchmurnie', '🌤️'], 2: ['Częściowe zachmurzenie', '⛅'], 3: ['Pochmurno', '☁️'],
-            45: ['Mgła', '🌫️'], 48: ['Mgła szronowa', '🌫️'],
-            51: ['Lekka mżawka', '🌦️'], 53: ['Mżawka', '🌦️'], 55: ['Silna mżawka', '🌧️'], 56: ['Marznąca mżawka', '🌧️'], 57: ['Marznąca mżawka', '🌧️'],
-            61: ['Lekki deszcz', '🌦️'], 63: ['Deszcz', '🌧️'], 65: ['Silny deszcz', '🌧️'], 66: ['Marznący deszcz', '🌧️'], 67: ['Marznący deszcz', '🌧️'],
-            71: ['Lekki śnieg', '🌨️'], 73: ['Śnieg', '❄️'], 75: ['Silny śnieg', '❄️'], 77: ['Ziarna śniegu', '❄️'],
-            80: ['Przelotny deszcz', '🌦️'], 81: ['Przelotny deszcz', '🌧️'], 82: ['Ulewa', '⛈️'],
-            85: ['Przelotny śnieg', '🌨️'], 86: ['Intensywny śnieg', '❄️'],
-            95: ['Burza', '⛈️'], 96: ['Burza z gradem', '⛈️'], 99: ['Burza z gradem', '⛈️']
+            45: ['Mgła', '🌫️'], 61: ['Lekki deszcz', '🌦️'], 63: ['Deszcz', '🌧️'], 71: ['Lekki śnieg', '🌨️'], 73: ['Śnieg', '❄️'], 95: ['Burza', '⛈️']
         };
         const wmo = c => WMO[c] || ['—', '·'];
         const HOURLY_CELLS = 12;
@@ -492,11 +480,7 @@
         }
 
         async function loadOpenMeteo() {
-            const url = 'https://api.open-meteo.com/v1/forecast'
-                + `?latitude=${LAT}&longitude=${LON}`
-                + '&current=temperature_2m,relative_humidity_2m,dew_point_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl'
-                + '&hourly=temperature_2m,precipitation,rain,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,pressure_msl'
-                + `&timezone=${encodeURIComponent(TZ)}&forecast_days=2`;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,dew_point_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl&hourly=temperature_2m,precipitation,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,pressure_msl&timezone=${encodeURIComponent(TZ)}&forecast_days=2`;
             return getJson(url);
         }
 
@@ -512,7 +496,7 @@
                 else if (prec > 0) { p = `🌧${fmt(prec, 1)}`; }
                 const g = Math.round(h.wind_gusts_10m[i]);
                 const wc = g >= 60 ? 'w high' : g >= 40 ? 'w mid' : 'w';
-                html += `<div class="hour-cell${i === start ? ' now' : ''}" title="${wmo(h.weather_code[i])[0]}">
+                html += `<div class="hour-cell${i === start ? ' now' : ''}">
                     <div class="h">${h.time[i].slice(11, 16)}</div>
                     <div class="ic">${wmo(h.weather_code[i])[1]}</div>
                     <div class="t">${Math.round(h.temperature_2m[i])}°</div>
@@ -531,15 +515,10 @@
             const rain = idx.map(i => h.precipitation[i]);
             const nowH = parseInt(String(curTime).slice(11, 13), 10);
             const colors = temps.map((_, i) => i === nowH ? '#f59e0b' : '#3b82f6');
-            const radius = temps.map((_, i) => i === nowH ? 5 : 2);
-            const seg = { borderDash: c => c.p0DataIndex >= nowH ? [6, 4] : undefined };
 
             if (tempChart) {
                 tempChart.data.labels = labels;
                 tempChart.data.datasets[0].data = temps;
-                tempChart.data.datasets[0].pointBackgroundColor = colors;
-                tempChart.data.datasets[0].pointRadius = radius;
-                tempChart.data.datasets[0].segment = seg;
                 tempChart.data.datasets[1].data = rain;
                 tempChart.update('none');
                 return;
@@ -548,24 +527,11 @@
                 data: {
                     labels,
                     datasets: [
-                        {
-                            type: 'line', label: 'Temperatura [°C] (przerywana = prognoza)', data: temps, yAxisID: 'y',
-                            borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.12)', borderWidth: 2.5, fill: true, tension: 0.3,
-                            pointBackgroundColor: colors, pointRadius: radius, segment: seg, order: 1
-                        },
-                        { type: 'bar', label: 'Opady [mm]', data: rain, yAxisID: 'y1', backgroundColor: 'rgba(96,165,250,0.55)', order: 2 }
+                        { type: 'line', label: 'Temperatura [°C]', data: temps, yAxisID: 'y', borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.12)', borderWidth: 2.5, fill: true, tension: 0.3, pointBackgroundColor: colors },
+                        { type: 'bar', label: 'Opady [mm]', data: rain, yAxisID: 'y1', backgroundColor: 'rgba(96,165,250,0.55)' }
                     ]
                 },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { labels: { color: '#f8fafc' } } },
-                    scales: {
-                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', maxTicksLimit: 12 } },
-                        y: { position: 'left', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', callback: v => v + '°' } },
-                        y1: { position: 'right', beginAtZero: true, suggestedMax: 2, grid: { drawOnChartArea: false }, ticks: { color: '#60a5fa' } }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { position: 'left' }, y1: { position: 'right', beginAtZero: true } } }
             });
         }
 
@@ -573,38 +539,21 @@
             try {
                 const om = await loadOpenMeteo();
                 const c = om.current, h = om.hourly;
-
-                $('weather-temp').innerText = fmt(c.temperature_2m, 1) + '°C';
-                $('weather-desc').innerText = wmo(c.weather_code)[1] + ' ' + wmo(c.weather_code)[0];
-                $('wx-pressure').innerText = fmt(c.pressure_msl, 1);
-                $('wx-humidity').innerText = Math.round(c.relative_humidity_2m) + ' %';
-                $('wx-dew').innerText = fmt(c.dew_point_2m, 1) + '°C';
-                $('wx-wind').innerText = `${Math.round(c.wind_speed_10m)} (${Math.round(c.wind_gusts_10m)}) km/h ${compass(c.wind_direction_10m)}`;
+                $('weather-temp').innerText = fmt(c.temperature_2m, 1) + '°C';$('weather-desc').innerText = wmo(c.weather_code)[1] + ' ' + wmo(c.weather_code)[0];
+                $('wx-pressure').innerText = fmt(c.pressure_msl, 1);$('wx-humidity').innerText = Math.round(c.relative_humidity_2m) + ' %';
+                $('wx-dew').innerText = fmt(c.dew_point_2m, 1) + '°C';$('wx-wind').innerText = `${Math.round(c.wind_speed_10m)} (${Math.round(c.wind_gusts_10m)}) km/h ${compass(c.wind_direction_10m)}`;
                 $('weather-precip').innerText = c.precipitation > 0 ? fmt(c.precipitation, 1) + ' mm/h' : 'Brak';
-
-                const today = String(c.time).slice(0, 10);
-                const pr = h.pressure_msl.filter((_, i) => h.time[i].startsWith(today));
-                $('wx-pressure-range').innerText = pr.length ? `${fmt(Math.min(...pr), 0)}–${fmt(Math.max(...pr), 0)}` : '--';
-
                 renderHourly(h, c.time);
                 renderTempChart(h, c.time);
-                $('om-status').innerHTML = '<span class="pulse"></span>Open-Meteo: prognoza OK';
-                $('om-time').innerText = 'sprawdzono ' + nowStr();
-            } catch (err) {
-                console.error('Open-Meteo:', err);
-                $('om-status').innerHTML = `<span class="pulse err"></span>Open-Meteo: <span class="err-text">${explain(err)}</span>`;
-                $('weather-desc').innerText = 'Błąd pobierania';
-                $('hourly').innerHTML = '<span class="sub-info err-text">Brak prognozy godzinowej.</span>';
-            }
+            } catch (err) { console.error('Open-Meteo:', err); }
         }
 
-        // ---------- Odświeżanie ----------
         function refreshDashboard() { refreshRb(); refreshKse(); refreshWeather(); }
 
         refreshDashboard();
-        setInterval(refreshRb, PSE_REFRESH_MS);   // ceny RB: co 30 s
-        setInterval(refreshKse, 15 * 1000);       // Mapa KSE: co 15 s
-        setInterval(refreshWeather, 10 * 60 * 1000);                       // pogoda: co 10 min
+        setInterval(refreshRb, PSE_REFRESH_MS);
+        setInterval(refreshKse, 15 * 1000);
+        setInterval(refreshWeather, 10 * 60 * 1000);
     </script>
 </body>
 </html>
