@@ -131,6 +131,8 @@
         .err-text { color: var(--accent-red); }
         .warn-text { color: var(--accent-orange); }
         
+        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+        
         button { background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
         button:hover { background: #1d4ed8; }
         button.secondary { background: #334155; }
@@ -170,6 +172,7 @@
     <header>
         <div>
             <h1>⚡ PSE + Pogoda (Sieć Cieplna ZG)</h1>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB, Bilans KSE oraz parametry pogody ZG na sieć | Klawisz F11 = Pełny Ekran</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div style="text-align: right;">
@@ -185,7 +188,7 @@
         <!-- CEN -->
         <div class="card" id="cen-card" style="border: 2px solid var(--border-color);">
             <h2>
-                <span>Ceny na Rynku Bilansującym PSE</span>
+                <span>Ceny na Rynku Bilansującym (RB)</span>
                 <button class="secondary" onclick="toggleCenFullscreen()" style="padding: 6px 12px; font-size: 0.8rem;">📺 Powiększ ten panel</button>
             </h2>
             <div><span id="cen-period" class="period">Okres: --</span></div>
@@ -284,7 +287,7 @@
 
         <!-- POGODA -->
         <div class="card">
-            <h2>Pogoda Zielona Góra</h2>
+            <h2>Pogoda ZG (Sieć Cieplna)</h2>
             <div class="wx-top">
                 <div id="weather-temp" class="value-huge" style="font-size: 2.2rem;">--°C</div>
                 <div id="weather-desc" style="font-size: 0.75rem; color: var(--text-muted);">Pobieranie...</div>
@@ -312,7 +315,7 @@
     <!-- POGODA WYKRES DOLNY -->
     <div class="charts-grid">
         <div class="card">
-            <h2>Wykres temperatury godzinowej i opadów - Zielona Góra</h2>
+            <h2>Temperatura godzinowa i opady - Zielona Góra</h2>
             <div class="chart-container"><canvas id="tempChart"></canvas></div>
         </div>
     </div>
@@ -637,39 +640,68 @@
             try { const { series, date } = await loadRbPrices(); renderRbCard(series, date); renderRbChart(series); } catch (err) { renderRbError(err); }
         }
 
+        // ---------- KSE: KASKADOWY FAILOVER Z ZACHOWANIEM STANU DANYCH ----------
+        // Zmienna trzymająca pamięć ostatniego działającego API (żeby nie skakać bez sensu)
+        let activeKseEndpointIndex = 0; 
+        
         async function refreshKse() {
-            const proxyUrl = 'https://pse-kse-proxy.lewwraff.workers.dev/';
-
             const numberOrNull = value => {
-                if (value === null || value === undefined || value === '') {
-                    return null;
-                }
+                if (value === null || value === undefined || value === '') return null;
                 const number = Number(value);
                 return Number.isFinite(number) ? number : null;
             };
 
             const formatMW = value => {
                 const number = numberOrNull(value);
-                return number === null
-                    ? '—'
-                    : `${Math.round(number).toLocaleString('pl-PL')} MW`;
+                return number === null ? '—' : `${Math.round(number).toLocaleString('pl-PL')} MW`;
             };
 
-            try {
-                const response = await fetch(proxyUrl, {
-                    cache: 'no-store'
-                });
+            let data = null;
+            let values = null;
+            let sourceName = '';
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+            const endpoints = [
+                { url: 'https://pvindex.pl/api/v1/stats/pse-system/current', name: 'API PV Index' },
+                { url: 'https://pse-kse-proxy.lewwraff.workers.dev/', name: 'Proxy: Cloudflare Worker' },
+                // W awaryjnym AllOrigins musimy odpowiednio wyłuskać zmienną contents
+                { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://pvindex.pl/api/v1/stats/pse-system/current'), name: 'Proxy: Publiczna bramka' }
+            ];
+
+            try {
+                // Próba pobrania danych, zaczynając od ostatniego znanego "dobrego" źródła
+                for (let attempt = 0; attempt < endpoints.length; attempt++) {
+                    const idx = (activeKseEndpointIndex + attempt) % endpoints.length;
+                    const ep = endpoints[idx];
+                    
+                    try {
+                        const response = await fetch(ep.url, { cache: 'no-store' });
+                        if (!response.ok) continue;
+                        
+                        let j = await response.json();
+                        // Jeśli to allorigins i JSON zawiera strukturę .contents (string) - parsujemy zawartość
+                        if (j && j.contents && typeof j.contents === 'string') {
+                            try { j = JSON.parse(j.contents); } catch(e){}
+                        }
+                        
+                        // Sprawdzamy czy JSON zawiera użyteczne dane dla KSE
+                        if (j && (j.demand !== undefined || (j.data && j.data.podsumowanie) || j.generation !== undefined)) {
+                            data = j;
+                            sourceName = ep.name;
+                            activeKseEndpointIndex = idx; // Zapamiętanie, który endpoint zadziałał
+                            break; 
+                        }
+                    } catch (e) {
+                        console.warn(`Zablokowano połączenie KSE: ${ep.name}`);
+                    }
                 }
 
-                const data = await response.json();
+                if (!data) {
+                    throw new Error('Wszystkie źródła KSE zostały zablokowane lub nie odpowiadają.');
+                }
 
-                const values = data.data &&
-                    typeof data.data === 'object' &&
-                    !Array.isArray(data.data)
-                    ? { ...data, ...data.data }
+                // Normalizacja danych (czasami API pakuje to w obiekt .data)
+                values = data.data && typeof data.data === 'object' && !Array.isArray(data.data) 
+                    ? { ...data, ...data.data } 
                     : data;
 
                 const demand = numberOrNull(values.demand);
@@ -682,43 +714,26 @@
                 const pv = numberOrNull(values.pv);
                 const other = numberOrNull(values.other);
 
-                const flowKeys = [
-                    'flow_se', 'flow_de', 'flow_cz', 'flow_sk', 'flow_ua', 'flow_lt'
-                ];
+                const flowKeys = ['flow_se', 'flow_de', 'flow_cz', 'flow_sk', 'flow_ua', 'flow_lt'];
+                const flowValues = flowKeys.map(key => numberOrNull(values[key])).filter(value => value !== null);
 
-                const flowValues = flowKeys
-                    .map(key => numberOrNull(values[key]))
-                    .filter(value => value !== null);
-
-                const hasAnyMeasurement =
-                    demand !== null ||
-                    generation !== null ||
-                    frequency !== null ||
-                    flowValues.length > 0;
+                const hasAnyMeasurement = demand !== null || generation !== null || frequency !== null || flowValues.length > 0;
 
                 if (!hasAnyMeasurement || values.error) {
-                    throw new Error('Brak poprawnych danych PV Index');
+                    throw new Error('Pobrano pusty lub błędny JSON z KSE');
                 }
 
-                const saldo = flowValues.length === flowKeys.length
-                    ? flowValues.reduce((sum, value) => sum + value, 0)
-                    : null;
+                const saldo = flowValues.length === flowKeys.length ? flowValues.reduce((sum, value) => sum + value, 0) : null;
 
+                // --- Aktualizacja DOM (UI) ---
                 if (demand !== null) $('kse-demand').innerText = formatMW(demand);
                 if (generation !== null) $('kse-gen').innerText = formatMW(generation);
                 if (saldo !== null) $('kse-saldo').innerText = saldo > 0 ? '+' + formatMW(saldo) : formatMW(saldo);
                 
                 if (frequency !== null) {
                     const freqEl = $('kse-freq');
-                    
-                    freqEl.innerText =
-                        `${frequency.toLocaleString('pl-PL', {
-                            minimumFractionDigits: 3,
-                            maximumFractionDigits: 3
-                        })} Hz`;
-                        
+                    freqEl.innerText = `${frequency.toLocaleString('pl-PL', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} Hz`;
                     const deviation = Math.abs(frequency - 50);
-
                     if (deviation >= 0.1) {
                         freqEl.style.color = 'var(--accent-red)';
                     } else if (deviation >= 0.05) {
@@ -734,77 +749,65 @@
                 if (pv !== null) $('kse-pv').innerText = formatMW(pv);
                 if (other !== null) $('kse-other').innerText = formatMW(other);
 
+                // --- LOGIKA BŁĘDÓW I WIEKU DANYCH ---
                 const pulse = $('kse-pulse');
                 const status = $('kse-status');
 
-                const timestamp = values.timestamp || values.created_at;
+                // Próba złapania poprawnego czasu z różnych źródeł JSON
+                let timestamp = values.timestamp || values.created_at;
+                if (!timestamp && values.dtime) timestamp = values.dtime; 
+                if (!timestamp && values.source_datetime) timestamp = values.source_datetime;
+                
                 const timestampMs = timestamp ? Date.parse(timestamp) : NaN;
                 const validTimestamp = Number.isFinite(timestampMs);
-
-                const ageMs = validTimestamp
-                    ? Date.now() - timestampMs
-                    : null;
+                const ageMs = validTimestamp ? Date.now() - timestampMs : null;
 
                 const MAX_AGE_MS = 3 * 60 * 1000;
                 const FUTURE_TOLERANCE_MS = 60 * 1000;
 
-                const staleByAge =
-                    ageMs !== null &&
-                    (ageMs > MAX_AGE_MS || ageMs < -FUTURE_TOLERANCE_MS);
-
+                const staleByAge = ageMs !== null && (ageMs > MAX_AGE_MS || ageMs < -FUTURE_TOLERANCE_MS);
                 const stale = values.stale === true;
 
                 pulse.classList.remove('err', 'warn');
                 status.classList.remove('err-text', 'warn-text');
 
                 const measurementTime = validTimestamp
-                    ? new Date(timestampMs).toLocaleTimeString('pl-PL', {
-                        timeZone: 'Europe/Warsaw'
-                    })
+                    ? new Date(timestampMs).toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw' })
                     : null;
 
                 if (stale) {
                     pulse.classList.add('warn');
                     status.classList.add('warn-text');
-                    status.innerText = 'PV Index: dane z kopii awaryjnej';
-
+                    status.innerText = `${sourceName}: kopia awaryjna`;
                 } else if (!validTimestamp) {
                     pulse.classList.add('warn');
                     status.classList.add('warn-text');
-                    status.innerText = 'PV Index: brak czasu pomiaru';
-
+                    status.innerText = `${sourceName}: brak czasu pomiaru`;
                 } else if (ageMs < -FUTURE_TOLERANCE_MS) {
                     pulse.classList.add('warn');
                     status.classList.add('warn-text');
-                    status.innerText = 'PV Index: nieprawidłowy czas pomiaru';
-
+                    status.innerText = `${sourceName}: zły czas pomiaru`;
                 } else if (staleByAge) {
                     pulse.classList.add('warn');
                     status.classList.add('warn-text');
-                    status.innerText = 'PV Index: pomiar opóźniony';
-
+                    status.innerText = `${sourceName}: pomiar opóźniony`;
                 } else {
-                    status.innerText = 'PV Index: świeży pomiar';
+                    status.innerText = `${sourceName}: pomiar na żywo`;
                 }
 
                 if (measurementTime) {
                     kseLastGoodMeasurementTime = measurementTime;
-
                     const ageMinutes = Math.max(0, Math.floor(ageMs / 60000));
-                    const ageLabel = ageMinutes === 0
-                        ? 'poniżej 1 min'
-                        : `${ageMinutes} min`;
-
-                    $('kse-update-time').innerText =
-                        `Pomiar: ${measurementTime} · Wiek: ${ageLabel} · Sprawdzono: ${nowStr()}`;
+                    const ageLabel = ageMinutes === 0 ? 'poniżej 1 min' : `${ageMinutes} min`;
+                    $('kse-update-time').innerText = `Pomiar: ${measurementTime} · Wiek: ${ageLabel} · Sprawdzono: ${nowStr()}`;
                 } else {
-                    $('kse-update-time').innerText =
-                        `Brak czasu pomiaru · Sprawdzono: ${nowStr()}`;
+                    $('kse-update-time').innerText = `Brak czasu pomiaru · Sprawdzono: ${nowStr()}`;
                 }
 
             } catch (error) {
-                console.error('Błąd KSE:', error);
-
+                console.error('Krytyczny błąd KSE (wszystkie źródła padły):', error);
+                
+                // W przypadku błędu nie czyścimy kafelków z poprzednich wartości, tylko oznaczamy je jako nieaktualne!
                 $('kse-pulse').classList.remove('warn');
                 $('kse-pulse').classList.add('err');
                 
@@ -814,9 +817,7 @@
                 $('kse-status').innerText = 'Błąd pobierania — ostatnie dane zachowane';
 
                 $('kse-update-time').innerText =
-                    `${kseLastGoodMeasurementTime
-                        ? 'Ostatni pomiar: ' + kseLastGoodMeasurementTime + ' · '
-                        : ''}Błąd: ${explain(error)} · Sprawdzono: ${nowStr()}`;
+                    `${kseLastGoodMeasurementTime ? 'Ostatni pomiar: ' + kseLastGoodMeasurementTime + ' · ' : ''}Błąd sieci · Spr: ${nowStr()}`;
             }
         }
 
@@ -946,19 +947,18 @@
                 tempChart.data.datasets[0].pointBorderWidth = borderWidths;
                 tempChart.data.datasets[0].pointRadius = radii;
                 tempChart.data.datasets[0].pointHoverRadius = hoverRadii;
-                tempChart.data.datasets[0].weatherEmojis = emojis; // Aktualizacja ikon
+                tempChart.data.datasets[0].weatherEmojis = emojis; 
 
                 tempChart.update('none');
                 return;
             }
 
             tempChart = new Chart($('tempChart').getContext('2d'), {
-                // Własny mini-plugin wstrzykujący rysunki nad wykresem
                 plugins: [{
                     id: 'weatherIcons',
                     afterDatasetsDraw(chart) {
                         const ctx = chart.ctx;
-                        const meta = chart.getDatasetMeta(0); // 0 to nasz dataset temperatury
+                        const meta = chart.getDatasetMeta(0); 
                         const emojisList = chart.data.datasets[0].weatherEmojis;
                         
                         if (!emojisList) return;
@@ -968,7 +968,6 @@
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
 
-                        // Rysowanie każdej ikony dokładnie nad kropką temperatury
                         meta.data.forEach((point, index) => {
                             if (emojisList[index]) {
                                 ctx.fillText(emojisList[index], point.x, point.y - 15);
@@ -995,7 +994,7 @@
                             pointBorderWidth: borderWidths,
                             pointRadius: radii,
                             pointHoverRadius: hoverRadii,
-                            weatherEmojis: emojis // Przekazanie ikon do pluginu
+                            weatherEmojis: emojis
                         },
                         {
                             type: 'bar',
@@ -1010,7 +1009,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     layout: {
-                        padding: { top: 28 } // Dodatkowy margines, żeby ikony miały miejsce
+                        padding: { top: 28 } // Margines dla ikonek nad wykresem
                     },
                     interaction: {
                         mode: 'index',
