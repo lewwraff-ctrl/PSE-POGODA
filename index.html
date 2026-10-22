@@ -73,8 +73,12 @@
         .card h2 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
         .card .status-bar { margin-top: auto; }
 
-        .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 3.8rem; font-weight: 800; margin: 10px 0; letter-spacing: -1px; white-space: nowrap; transition: color 0.3s; }
-        .sub-info { font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; }
+        /* Ułożenie ceny i mini-wykresu obok siebie */
+        .cen-layout { display: flex; gap: 20px; align-items: center; margin: 10px 0; }
+        .mini-chart-wrapper { flex-grow: 1; height: 90px; min-width: 0; }
+        .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 3.8rem; font-weight: 800; letter-spacing: -1px; white-space: nowrap; transition: color 0.3s; margin: 0; }
+        .sub-info { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+        
         .period {
             display: inline-block; margin-top: 4px; padding: 6px 12px; border-radius: 6px;
             background: rgba(255,255,255,0.05); color: var(--text-main);
@@ -147,19 +151,24 @@
         .wx-alert.frost { background: rgba(59,130,246,0.15); border-color: #3b82f6; color: #93c5fd; }
         .wx-alert.wind { background: rgba(245,158,11,0.15); border-color: #f59e0b; color: #fcd34d; }
 
+        /* TRYB PEŁNOEKRANOWY - Z MIEJSCEM NA WYKRES */
         #cen-card:fullscreen, #cen-card:-webkit-full-screen { background: var(--card-bg); padding: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100vw; height: 100vh; }
-        #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: 14vw !important; margin: 20px 0; }
+        #cen-card:fullscreen .cen-layout, #cen-card:-webkit-full-screen .cen-layout { flex-direction: column; width: 90vw; height: 60vh; justify-content: center; }
+        #cen-card:fullscreen .mini-chart-wrapper, #cen-card:-webkit-full-screen .mini-chart-wrapper { height: 40vh; width: 100%; margin-top: 30px; }
+        #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: 10vw !important; text-align: center; }
+        #cen-card:fullscreen .sub-info, #cen-card:-webkit-full-screen .sub-info { text-align: center; font-size: 1.5rem; margin-top: 10px; }
         #cen-card:fullscreen h2, #cen-card:-webkit-full-screen h2 { font-size: 2.2rem !important; }
         #cen-card:fullscreen .period, #cen-card:-webkit-full-screen .period { font-size: 2.2rem !important; padding: 12px 24px; }
-        #cen-card:fullscreen .weather-grid, #cen-card:fullscreen .threshold-info, #cen-card:fullscreen .status-bar, #cen-card:-webkit-full-screen .weather-grid, #cen-card:-webkit-full-screen .threshold-info, #cen-card:-webkit-full-screen .status-bar { display: none !important; }
+        
+        #cen-card:fullscreen .weather-grid, #cen-card:fullscreen .threshold-info, #cen-card:fullscreen .status-bar, 
+        #cen-card:-webkit-full-screen .weather-grid, #cen-card:-webkit-full-screen .threshold-info, #cen-card:-webkit-full-screen .status-bar { display: none !important; }
     </style>
 </head>
 <body>
 
     <header>
         <div>
-            <h1>⚡ PSE + Pogoda (Sieć Cieplna ZG)</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB, Bilans KSE oraz parametry pogody ZG na sieć | Klawisz F11 = Pełny Ekran</span>
+            <h1>⚡ PSE + Pogoda </h1>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div style="text-align: right;">
@@ -179,8 +188,17 @@
                 <button class="secondary" onclick="toggleCenFullscreen()" style="padding: 6px 12px; font-size: 0.8rem;">📺 Powiększ ten panel</button>
             </h2>
             <div><span id="cen-period" class="period">Okres: --</span></div>
-            <div id="cen-price" class="value-huge">--</div>
-            <div class="sub-info" id="cen-sub">CEN [zł/MWh]</div>
+            
+            <!-- NOWY UKŁAD: CENA + MINI WYKRES -->
+            <div class="cen-layout">
+                <div style="flex-shrink: 0;">
+                    <div id="cen-price" class="value-huge">--</div>
+                    <div class="sub-info" id="cen-sub">CEN [zł/MWh]</div>
+                </div>
+                <div class="mini-chart-wrapper">
+                    <canvas id="miniRbChart"></canvas>
+                </div>
+            </div>
 
             <div class="weather-grid">
                 <div class="weather-item"><span>COR [zł/MWh]</span><strong id="cor-price" style="color: var(--accent-blue);">--</strong></div>
@@ -239,9 +257,9 @@
             </div>
         </div>
 
-        <!-- POGODA DLA SIECI -->
+        <!-- POGODA -->
         <div class="card">
-            <h2>Pogoda ZG (Sieć Cieplna)</h2>
+            <h2>Pogoda</h2>
             <div class="wx-top">
                 <div id="weather-temp" class="value-huge" style="font-size: 2.2rem;">--°C</div>
                 <div id="weather-desc" style="font-size: 0.75rem; color: var(--text-muted);">Pobieranie...</div>
@@ -254,7 +272,6 @@
                 <div class="weather-item"><span>Wiatr (poryw)</span><strong id="wx-wind" style="color: var(--accent-orange);">--</strong></div>
             </div>
 
-            <!-- Kontener na dynamiczne Alerty Sieciowe -->
             <div id="wx-alerts"></div>
 
             <div class="hourly-title">Najbliższe 36 godzin (przewiń ➔)</div>
@@ -285,6 +302,7 @@
         const PSE_REFRESH_MS = 30 * 1000;
 
         let rbChart = null;
+        let miniRbChart = null; // Zmienna dla nowego małego wykresu
         let tempChart = null;
         let lastNotifiedPeriod = null; 
         let titleInterval = null;
@@ -495,7 +513,7 @@
         function renderRbCard(series, date) {
             const last = [...series].reverse().find(r => r.cen !== null) || series[series.length - 1];
             const cenEl = $('cen-price');
-            cenEl.innerText = fmt(last.cen) + ' zł';
+            cenEl.innerText = fmt(last.cen);
             
             $('cor-price').innerText = fmt(last.cor);
             $('ckoeb-price').innerText = fmt(last.ckoeb);
@@ -519,28 +537,74 @@
             $('cen-status').innerText = 'Błąd API PSE: ' + explain(err);
         }
 
+        // TWORZENIE OBU WYKRESÓW (DUŻEGO I MAŁEGO)
         function renderRbChart(series) {
             const labels = series.map(r => hhmm(r.dtime));
+            const cenData = series.map(r => r.cen);
+            
+            // 1. Duży wykres na dole strony
             const ds = [
-                { label: 'CEN', data: series.map(r => r.cen), borderColor: '#ef4444', borderWidth: 2.5 },
+                { label: 'CEN', data: cenData, borderColor: '#ef4444', borderWidth: 2.5 },
                 { label: 'COR', data: series.map(r => r.cor), borderColor: '#94a3b8', borderWidth: 2 },
                 { label: 'CKOEB', data: series.map(r => r.ckoeb), borderColor: '#3b82f6', borderWidth: 2 }
             ].map(d => ({ ...d, fill: false, tension: 0.15, pointRadius: 0, spanGaps: true }));
 
             if (rbChart) {
-                rbChart.data.labels = labels; rbChart.data.datasets.forEach((d, i) => { d.data = ds[i].data; }); rbChart.update('none'); return;
-            }
-            rbChart = new Chart($('rbChart').getContext('2d'), {
-                type: 'line', data: { labels, datasets: ds },
-                options: {
-                    responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { labels: { color: '#f8fafc' } } },
-                    scales: {
-                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', maxTicksLimit: 12 } },
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+                rbChart.data.labels = labels; rbChart.data.datasets.forEach((d, i) => { d.data = ds[i].data; }); rbChart.update('none');
+            } else {
+                rbChart = new Chart($('rbChart').getContext('2d'), {
+                    type: 'line', data: { labels, datasets: ds },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                        plugins: { legend: { labels: { color: '#f8fafc' } } },
+                        scales: {
+                            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', maxTicksLimit: 12 } },
+                            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+                        }
                     }
-                }
-            });
+                });
+            }
+
+            // 2. Nowy mały wykres cen (sparkline) obok ceny głównej
+            if (miniRbChart) {
+                miniRbChart.data.labels = labels; 
+                miniRbChart.data.datasets[0].data = cenData; 
+                miniRbChart.update('none');
+            } else {
+                miniRbChart = new Chart($('miniRbChart').getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: cenData,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.2,
+                            pointRadius: 0,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                        scales: {
+                            x: { 
+                                display: true, 
+                                ticks: { color: '#64748b', maxTicksLimit: 6, font: { size: 10 } }, 
+                                grid: { display: false } 
+                            },
+                            y: { 
+                                display: true, 
+                                position: 'right',
+                                ticks: { color: '#64748b', maxTicksLimit: 4, font: { size: 10 } }, 
+                                grid: { color: 'rgba(255,255,255,0.05)' } 
+                            }
+                        }
+                    }
+                });
+            }
         }
 
         async function refreshRb() {
@@ -549,7 +613,7 @@
 
         async function refreshKse() {
             try {
-                const response = await fetch('https://pvindex.pl/api/v1/stats/pse-system/current', { cache: 'no-store' });
+                const response = await fetch('https://pse-kse-proxy.lewwraff.workers.dev/', { cache: 'no-store' });
                 if (!response.ok) throw new Error(`Błąd API: ${response.status}`);
                 const data = await response.json();
 
@@ -655,11 +719,9 @@
                 const om = await loadOpenMeteo();
                 const c = om.current, h = om.hourly;
                 
-                // Analiza zjawisk pogodowych do ustawień na sieć
                 const currentTemp = c.temperature_2m;
                 const currentGusts = c.wind_gusts_10m;
                 
-                // Szukanie minimalnej temperatury w ciągu najbliższych 12 godzin
                 let minTemp12h = currentTemp;
                 let startIdx = h.time.findIndex(t => t.slice(0, 13) === String(c.time).slice(0, 13));
                 startIdx = Math.max(0, startIdx);
@@ -667,7 +729,6 @@
                     if(h.temperature_2m[i] < minTemp12h) minTemp12h = h.temperature_2m[i];
                 }
 
-                // Generowanie Alertów Sieciowych
                 let alertsHtml = '';
                 if (currentTemp <= 0) {
                     alertsHtml += `<div class="wx-alert frost">❄️ UWAGA MRÓZ: Temperatura spadła poniżej zera</div>`;
@@ -680,7 +741,6 @@
                 }
                 $('wx-alerts').innerHTML = alertsHtml;
 
-                // Standardowe zasilanie danych GUI
                 $('weather-temp').innerText = fmt(c.temperature_2m, 1) + '°C';
                 $('weather-desc').innerText = wmo(c.weather_code)[1] + ' ' + wmo(c.weather_code)[0];
                 $('wx-pressure').innerText = fmt(c.pressure_msl, 1) + ' hPa';
