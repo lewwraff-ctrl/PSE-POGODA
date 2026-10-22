@@ -54,21 +54,14 @@
             min-width: 0; 
         }
 
-        .card.alarm-teal { animation: pulse-teal 0.6s infinite alternate; }
-        .card.alarm-sky { animation: pulse-sky 0.8s infinite alternate; }
-        .card.alarm-blue { animation: pulse-blue 1s infinite alternate; }
-        .card.alarm-indigo { animation: pulse-indigo 1.5s infinite alternate; }
-        .card.alarm-red { animation: pulse-red 1s infinite alternate; }
-        .card.alarm-darkred { animation: pulse-darkred 0.8s infinite alternate; }
-        .card.alarm-purple { animation: pulse-purple 0.6s infinite alternate; }
-
-        @keyframes pulse-teal { 0% { box-shadow: 0 0 5px rgba(45,212,191,0.2); background: #131c2e; } 100% { box-shadow: 0 0 35px rgba(45,212,191,0.9); background: rgba(45,212,191,0.15); } }
-        @keyframes pulse-sky { 0% { box-shadow: 0 0 5px rgba(14,165,233,0.2); background: #131c2e; } 100% { box-shadow: 0 0 30px rgba(14,165,233,0.9); background: rgba(14,165,233,0.15); } }
-        @keyframes pulse-blue { 0% { box-shadow: 0 0 5px rgba(59,130,246,0.2); background: #131c2e; } 100% { box-shadow: 0 0 25px rgba(59,130,246,0.8); background: rgba(59,130,246,0.1); } }
-        @keyframes pulse-indigo { 0% { box-shadow: 0 0 5px rgba(129,140,248,0.2); background: #131c2e; } 100% { box-shadow: 0 0 20px rgba(129,140,248,0.7); background: rgba(129,140,248,0.08); } }
-        @keyframes pulse-red { 0% { box-shadow: 0 0 5px rgba(239,68,68,0.2); background: #131c2e; } 100% { box-shadow: 0 0 25px rgba(239,68,68,0.8); background: rgba(239,68,68,0.1); } }
-        @keyframes pulse-darkred { 0% { box-shadow: 0 0 5px rgba(185,28,28,0.2); background: #131c2e; } 100% { box-shadow: 0 0 30px rgba(185,28,28,0.9); background: rgba(185,28,28,0.15); } }
-        @keyframes pulse-purple { 0% { box-shadow: 0 0 5px rgba(147,51,234,0.2); background: #131c2e; } 100% { box-shadow: 0 0 35px rgba(147,51,234,0.9); background: rgba(147,51,234,0.15); } }
+        .card.alarm-teal { animation: none !important; }
+        .card.alarm-sky { animation: none !important; }
+        .card.alarm-blue { animation: none !important; }
+        .card.alarm-indigo { animation: none !important; }
+        .card.alarm-red { animation: none !important; }
+        .card.alarm-darkred { animation: none !important; }
+        .card.alarm-purple { animation: none !important; }
+        .card[class*="alarm-"] { animation: none !important; }
 
         .card h2 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
         .card .status-bar { margin-top: auto; }
@@ -95,6 +88,7 @@
         .hourly { 
             display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; 
             scrollbar-width: thin; scrollbar-color: var(--accent-blue) rgba(255,255,255,0.05); 
+            -webkit-overflow-scrolling: touch;
         }
         .hourly::-webkit-scrollbar { height: 8px; }
         .hourly::-webkit-scrollbar-track { background: rgba(0,0,0,0.15); border-radius: 4px; }
@@ -165,6 +159,11 @@
         }
         #cen-card:fullscreen .weather-grid, #cen-card:fullscreen .threshold-info, #cen-card:fullscreen .status-bar, 
         #cen-card:-webkit-full-screen .weather-grid, #cen-card:-webkit-full-screen .threshold-info, #cen-card:-webkit-full-screen .status-bar { display: none !important; }
+
+        @media (max-width: 380px) {
+            body { padding: 7px; }
+            .card { padding: 11px; }
+        }
     </style>
 </head>
 <body>
@@ -332,6 +331,9 @@
         let titleInterval = null;
         let soundMuted = localStorage.getItem('pse_sound_muted') === 'true';
         let kseLastGoodMeasurementTime = null; 
+        let lastDailyReloadKey = null;
+        let kseInFlight = false;
+        let weatherInFlight = false;
 
         const $ = id => document.getElementById(id);
         const pad = n => String(n).padStart(2, '0');
@@ -429,8 +431,29 @@
             $('clock').innerText = now.toLocaleTimeString('pl-PL', { timeZone: TZ }); 
             $('date-box').innerText = now.toLocaleDateString('pl-PL', { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit', timeZone: TZ });
             
-            if (now.getHours() === 3 && now.getMinutes() === 0 && now.getSeconds() === 0) {
-                window.location.reload(true);
+            const nowParts = new Intl.DateTimeFormat('en-GB', {
+                timeZone: TZ,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hourCycle: 'h23'
+            }).formatToParts(now);
+
+            const parts = Object.fromEntries(
+                nowParts.map(part => [part.type, part.value])
+            );
+
+            const reloadKey = `${parts.year}-${parts.month}-${parts.day}`;
+
+            if (
+                parts.hour === '03' &&
+                parts.minute === '00' &&
+                lastDailyReloadKey !== reloadKey
+            ) {
+                lastDailyReloadKey = reloadKey;
+                window.location.reload();
             }
         }, 1000);
 
@@ -640,11 +663,12 @@
             try { const { series, date } = await loadRbPrices(); renderRbCard(series, date); renderRbChart(series); } catch (err) { renderRbError(err); }
         }
 
-        // ---------- KSE: KASKADOWY FAILOVER Z ZACHOWANIEM STANU DANYCH ----------
-        // Zmienna trzymająca pamięć ostatniego działającego API (żeby nie skakać bez sensu)
         let activeKseEndpointIndex = 0; 
         
         async function refreshKse() {
+            if (kseInFlight) return;
+            kseInFlight = true;
+
             const numberOrNull = value => {
                 if (value === null || value === undefined || value === '') return null;
                 const number = Number(value);
@@ -663,12 +687,10 @@
             const endpoints = [
                 { url: 'https://pvindex.pl/api/v1/stats/pse-system/current', name: 'API PV Index' },
                 { url: 'https://pse-kse-proxy.lewwraff.workers.dev/', name: 'Proxy: Cloudflare Worker' },
-                // W awaryjnym AllOrigins musimy odpowiednio wyłuskać zmienną contents
                 { url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://pvindex.pl/api/v1/stats/pse-system/current'), name: 'Proxy: Publiczna bramka' }
             ];
 
             try {
-                // Próba pobrania danych, zaczynając od ostatniego znanego "dobrego" źródła
                 for (let attempt = 0; attempt < endpoints.length; attempt++) {
                     const idx = (activeKseEndpointIndex + attempt) % endpoints.length;
                     const ep = endpoints[idx];
@@ -678,16 +700,14 @@
                         if (!response.ok) continue;
                         
                         let j = await response.json();
-                        // Jeśli to allorigins i JSON zawiera strukturę .contents (string) - parsujemy zawartość
                         if (j && j.contents && typeof j.contents === 'string') {
                             try { j = JSON.parse(j.contents); } catch(e){}
                         }
                         
-                        // Sprawdzamy czy JSON zawiera użyteczne dane dla KSE
                         if (j && (j.demand !== undefined || (j.data && j.data.podsumowanie) || j.generation !== undefined)) {
                             data = j;
                             sourceName = ep.name;
-                            activeKseEndpointIndex = idx; // Zapamiętanie, który endpoint zadziałał
+                            activeKseEndpointIndex = idx; 
                             break; 
                         }
                     } catch (e) {
@@ -699,7 +719,6 @@
                     throw new Error('Wszystkie źródła KSE zostały zablokowane lub nie odpowiadają.');
                 }
 
-                // Normalizacja danych (czasami API pakuje to w obiekt .data)
                 values = data.data && typeof data.data === 'object' && !Array.isArray(data.data) 
                     ? { ...data, ...data.data } 
                     : data;
@@ -725,7 +744,6 @@
 
                 const saldo = flowValues.length === flowKeys.length ? flowValues.reduce((sum, value) => sum + value, 0) : null;
 
-                // --- Aktualizacja DOM (UI) ---
                 if (demand !== null) $('kse-demand').innerText = formatMW(demand);
                 if (generation !== null) $('kse-gen').innerText = formatMW(generation);
                 if (saldo !== null) $('kse-saldo').innerText = saldo > 0 ? '+' + formatMW(saldo) : formatMW(saldo);
@@ -749,11 +767,9 @@
                 if (pv !== null) $('kse-pv').innerText = formatMW(pv);
                 if (other !== null) $('kse-other').innerText = formatMW(other);
 
-                // --- LOGIKA BŁĘDÓW I WIEKU DANYCH ---
                 const pulse = $('kse-pulse');
                 const status = $('kse-status');
 
-                // Próba złapania poprawnego czasu z różnych źródeł JSON
                 let timestamp = values.timestamp || values.created_at;
                 if (!timestamp && values.dtime) timestamp = values.dtime; 
                 if (!timestamp && values.source_datetime) timestamp = values.source_datetime;
@@ -772,7 +788,7 @@
                 status.classList.remove('err-text', 'warn-text');
 
                 const measurementTime = validTimestamp
-                    ? new Date(timestampMs).toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw' })
+                    ? new Date(timestampMs).toLocaleTimeString('pl-PL', { timeZone: TZ })
                     : null;
 
                 if (stale) {
@@ -807,7 +823,6 @@
             } catch (error) {
                 console.error('Krytyczny błąd KSE (wszystkie źródła padły):', error);
                 
-                // W przypadku błędu nie czyścimy kafelków z poprzednich wartości, tylko oznaczamy je jako nieaktualne!
                 $('kse-pulse').classList.remove('warn');
                 $('kse-pulse').classList.add('err');
                 
@@ -818,6 +833,8 @@
 
                 $('kse-update-time').innerText =
                     `${kseLastGoodMeasurementTime ? 'Ostatni pomiar: ' + kseLastGoodMeasurementTime + ' · ' : ''}Błąd sieci · Spr: ${nowStr()}`;
+            } finally {
+                kseInFlight = false;
             }
         }
 
@@ -908,15 +925,12 @@
             const temps = idx.map(i => h.temperature_2m[i]);
             const rain = idx.map(i => h.precipitation[i]);
             
-            // Pobranie odpowiednich ikon emoji (indeks [1] z naszej tablicy WMO)
             const emojis = idx.map(i => wmo(h.weather_code[i])[1]);
 
-            // Szukamy aktualnej godziny po pełnym znaczniku daty i godziny.
             const currentIndex = idx.findIndex(
                 i => h.time[i].slice(0, 13) === currentHour
             );
 
-            // Aktualny punkt: większy, pomarańczowy, z białą obwódką.
             const colors = temps.map((_, i) =>
                 i === currentIndex ? '#f59e0b' : '#3b82f6'
             );
@@ -948,6 +962,7 @@
                 tempChart.data.datasets[0].pointRadius = radii;
                 tempChart.data.datasets[0].pointHoverRadius = hoverRadii;
                 tempChart.data.datasets[0].weatherEmojis = emojis; 
+                tempChart.$currentHour = currentHour;
 
                 tempChart.update('none');
                 return;
@@ -1009,7 +1024,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     layout: {
-                        padding: { top: 28 } // Margines dla ikonek nad wykresem
+                        padding: { top: 28 } 
                     },
                     interaction: {
                         mode: 'index',
@@ -1023,7 +1038,10 @@
                             callbacks: {
                                 title: items => {
                                     if (!items.length) return '';
-                                    return currentIndex === items[0].dataIndex
+                                    const latestCurrentTime = String(
+                                        tempChart.$currentHour || ''
+                                    );
+                                    return h.time[idx[items[0].dataIndex]]?.slice(0, 13) === latestCurrentTime
                                         ? `${items[0].label} — AKTUALNA GODZINA`
                                         : items[0].label;
                                 }
@@ -1049,9 +1067,14 @@
                     }
                 }
             });
+
+            tempChart.$currentHour = currentHour;
         }
 
         async function refreshWeather() {
+            if (weatherInFlight) return;
+            weatherInFlight = true;
+
             try {
                 const om = await loadOpenMeteo();
                 const c = om.current, h = om.hourly;
@@ -1067,9 +1090,16 @@
                 }
 
                 let alertsHtml = '';
-                if (currentTemp <= 0) {
-                    alertsHtml += `<div class="wx-alert frost">❄️ UWAGA MRÓZ: Temperatura spadła poniżej zera</div>`;
+                if (currentTemp < 0) {
+                    alertsHtml += `<div class="wx-alert frost">
+                        ❄️ UWAGA MRÓZ: Temperatura poniżej zera (${currentTemp.toLocaleString('pl-PL')}°C)
+                    </div>`;
+                } else if (currentTemp === 0) {
+                    alertsHtml += `<div class="wx-alert frost">
+                        ❄️ UWAGA: Temperatura wynosi dokładnie 0°C
+                    </div>`;
                 }
+
                 if (minTemp12h <= currentTemp - 5) {
                     alertsHtml += `<div class="wx-alert cold">📉 OCHŁODZENIE: Prognozowany spadek do ${Math.round(minTemp12h)}°C w ciągu 12h (uwaga na bezwładność sieci)</div>`;
                 }
@@ -1095,8 +1125,11 @@
                 console.error('Open-Meteo:', err);
                 const status = $('om-status');
                 if (status) {
-                    status.innerText = '⚠️ Błąd pobierania pogody — ponawiam przy kolejnym odświeżeniu';
+                    $('om-status').innerHTML = '<span class="pulse err"></span>Brak świeżych danych pogodowych';
+                    $('om-time').innerText = 'Ostatnia próba: ' + nowStr();
                 }
+            } finally {
+                weatherInFlight = false;
             }
         }
 
