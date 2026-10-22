@@ -150,61 +150,28 @@
         .wx-alert.wind { background: rgba(245,158,11,0.15); border-color: #f59e0b; color: #fcd34d; }
         .wx-alert.rain-warn { background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #93c5fd; }
 
-        /* Elementy pełnoekranowe kafelka cen */
-        #fs-weather-strip { display: none; }
-        #fs-wx-alerts { display: none; }
-        #fs-hourly-wrap { display: none; }
+        /* Ukrycie elementów domyślnych w fullscreen i włączenie układu dwukolumnowego */
+        #fs-weather-panel { display: none; }
+        .fs-left-col { display: contents; }
+        .fs-right-col { display: none; }
 
         #cen-card:fullscreen, #cen-card:-webkit-full-screen { 
-            background: var(--card-bg); padding: 20px 30px; display: flex; flex-direction: column; 
-            justify-content: flex-start; width: 100vw; height: 100vh; overflow: hidden;
+            background: var(--card-bg); padding: 25px; display: grid !important; 
+            grid-template-columns: 1.25fr 1fr; gap: 20px; width: 100vw; height: 100vh; overflow: hidden;
         }
-        #cen-card:fullscreen h2, #cen-card:-webkit-full-screen h2 { font-size: 1.8rem !important; margin-bottom: 1vh; }
-        #cen-card:fullscreen #cen-period, #cen-card:-webkit-full-screen #cen-period { font-size: 2.2vh !important; padding: 0.6vh 1.2vh; margin: 0 auto; display: block; width: max-content; }
-        #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: 10vh !important; text-align: center; margin: 0.5vh 0; line-height: 1; }
-        #cen-card:fullscreen .sub-info, #cen-card:-webkit-full-screen .sub-info { text-align: center; font-size: 1.8vh; }
+        #cen-card:fullscreen h2, #cen-card:-webkit-full-screen h2 { grid-column: span 2; font-size: 1.5rem !important; margin-bottom: 0; }
         
-        /* Pasek pogodowy w trybie pełnoekranowym */
-        #cen-card:fullscreen #fs-weather-strip, #cen-card:-webkit-full-screen #fs-weather-strip {
-            display: flex !important;
-            justify-content: space-around;
-            align-items: center;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 8px;
-            padding: 1vh 2vw;
-            margin: 0.8vh 0;
-            font-size: 1.9vh;
+        #cen-card:fullscreen .fs-left-col, #cen-card:-webkit-full-screen .fs-left-col {
+            display: flex; flex-direction: column; justify-content: flex-start; min-width: 0;
+        }
+        #cen-card:fullscreen .fs-right-col, #cen-card:-webkit-full-screen .fs-right-col {
+            display: flex !important; flex-direction: column; background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; overflow-y: auto;
         }
 
-        /* Alerty pogodowe w trybie pełnoekranowym */
-        #cen-card:fullscreen #fs-wx-alerts, #cen-card:-webkit-full-screen #fs-wx-alerts {
-            display: flex !important;
-            flex-direction: column;
-            gap: 4px;
-            margin-bottom: 0.8vh;
-        }
-        #cen-card:fullscreen #fs-wx-alerts .wx-alert, #cen-card:-webkit-full-screen #fs-wx-alerts .wx-alert {
-            font-size: 1.6vh !important;
-            padding: 0.8vh 1.2vw !important;
-        }
-
-        /* Pogoda godzinowa w trybie pełnoekranowym */
-        #cen-card:fullscreen #fs-hourly-wrap, #cen-card:-webkit-full-screen #fs-hourly-wrap {
-            display: block !important;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 8px;
-            padding: 8px 12px;
-            margin-bottom: 1vh;
-        }
-        #cen-card:fullscreen #fs-hourly-wrap .hourly-title, #cen-card:-webkit-full-screen #fs-hourly-wrap .hourly-title {
-            margin: 0 0 4px 0;
-            font-size: 0.65rem;
-        }
-
+        #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: 9vh !important; margin: 5px 0; line-height: 1; }
         #cen-card:fullscreen .rb-chart-box, #cen-card:-webkit-full-screen .rb-chart-box { 
-            flex-grow: 1; height: auto !important; min-height: 0; width: 100%; margin-top: 10px; border-top: none;
+            flex-grow: 1; height: auto !important; min-height: 160px; width: 100%; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;
         }
         #cen-card:fullscreen .weather-grid, #cen-card:fullscreen .threshold-info, #cen-card:fullscreen .status-bar, 
         #cen-card:-webkit-full-screen .weather-grid, #cen-card:-webkit-full-screen .threshold-info, #cen-card:-webkit-full-screen .status-bar { display: none !important; }
@@ -239,60 +206,68 @@
                 <span>Ceny na Rynku Bilansującym (RB)</span>
                 <button class="secondary" onclick="toggleCenFullscreen()" style="padding: 6px 12px; font-size: 0.8rem;">📺 Powiększ ten panel</button>
             </h2>
-            <div><span id="cen-period" class="period">Okres: --</span></div>
-            <div id="cen-price" class="value-huge">--</div>
-            <div class="sub-info" id="cen-sub">CEN [zł/MWh]</div>
 
-            <!-- Pasek pogodowy w trybie pełnoekranowym -->
-            <div id="fs-weather-strip">
-                <div>🌡️ Temp: <strong id="fs-wx-temp" style="color: var(--accent-blue);">--</strong></div>
-                <div>📉 Trend +3h: <strong id="fs-wx-trend" style="color: var(--accent-orange);">--</strong></div>
-                <div>💨 Wiatr/Porywy: <strong id="fs-wx-wind">--</strong></div>
-                <div>🌧️ Opady wkrótce: <strong id="fs-wx-rain" style="color: #60a5fa;">Brak</strong></div>
+            <!-- LEWA STRONA W FULLSCREEN (Główna cena i wykres) -->
+            <div class="fs-left-col">
+                <div><span id="cen-period" class="period">Okres: --</span></div>
+                <div id="cen-price" class="value-huge">--</div>
+                <div class="sub-info" id="cen-sub">CEN [zł/MWh]</div>
+
+                <div class="weather-grid">
+                    <div class="weather-item"><span>COR [zł/MWh]</span><strong id="cor-price" style="color: var(--accent-blue);">--</strong></div>
+                    <div class="weather-item"><span>CKOEB [zł/MWh]</span><strong id="ckoeb-price">--</strong></div>
+                </div>
+
+                <div class="threshold-info">
+                    <span style="color: #c026d3;">&lt;-5k</span>
+                    <span style="color: #14b8a6;">-5k..-2k</span>
+                    <span style="color: #06b6d4;">-2k..-1k</span>
+                    <span style="color: #0ea5e9;">-1k..-500</span>
+                    <span style="color: #3b82f6;">-500..-200</span>
+                    <span style="color: #818cf8;">-200..0</span>
+                    <span style="color: #10b981;">0..200</span>
+                    <span style="color: #84cc16;">200..500</span>
+                    <span style="color: #eab308;">500..800</span>
+                    <span style="color: #f59e0b;">800..1k</span>
+                    <span style="color: #ef4444;">1k..2k</span>
+                    <span style="color: #b91c1c;">2k..4k</span>
+                    <span style="color: #9333ea;">4k..5k</span>
+                    <span style="color: #ec4899;">&gt;5k</span>
+                </div>
+
+                <div class="rb-chart-box">
+                    <canvas id="rbChart"></canvas>
+                </div>
+
+                <div class="status-bar">
+                    <span><span id="cen-pulse" class="pulse"></span><span id="cen-status">Portal PSE Live</span></span>
+                    <span id="cen-update-time">--</span>
+                </div>
             </div>
 
-            <!-- Alerty pogodowe w trybie pełnoekranowym -->
-            <div id="fs-wx-alerts"></div>
+            <!-- PRAWA STRONA W FULLSCREEN (Karta pogodowa w stylu Twojego wzoru) -->
+            <div class="fs-right-col">
+                <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Pogoda ZG (Sieć Cieplna)</div>
+                <div class="wx-top" style="margin-bottom: 15px;">
+                    <div id="fs-weather-temp" class="value-huge" style="font-size: 2.5rem !important; margin: 0;">--°C</div>
+                    <div id="fs-weather-desc" style="font-size: 0.85rem; color: var(--text-muted);">Pobieranie...</div>
+                </div>
 
-            <!-- Pogoda godzinowa w trybie pełnoekranowym -->
-            <div id="fs-hourly-wrap">
-                <div class="hourly-title">Najbliższe godziny (przewiń ➔)</div>
-                <div id="fs-hourly" class="hourly"></div>
-            </div>
+                <div class="metrics-grid" style="margin-bottom: 15px;">
+                    <div class="weather-item"><span>Ciśnienie</span><strong id="fs-wx-pressure">--</strong></div>
+                    <div class="weather-item"><span>Wilgotność</span><strong id="fs-wx-humidity">--</strong></div>
+                    <div class="weather-item"><span>Punkt rosy</span><strong id="fs-wx-dew">--</strong></div>
+                    <div class="weather-item"><span>Wiatr (poryw)</span><strong id="fs-wx-wind" style="color: var(--accent-orange);">--</strong></div>
+                </div>
 
-            <div class="weather-grid">
-                <div class="weather-item"><span>COR [zł/MWh]</span><strong id="cor-price" style="color: var(--accent-blue);">--</strong></div>
-                <div class="weather-item"><span>CKOEB [zł/MWh]</span><strong id="ckoeb-price">--</strong></div>
-            </div>
+                <div id="fs-wx-alerts" style="margin-bottom: 10px;"></div>
 
-            <div class="threshold-info">
-                <span style="color: #c026d3;">&lt;-5k</span>
-                <span style="color: #14b8a6;">-5k..-2k</span>
-                <span style="color: #06b6d4;">-2k..-1k</span>
-                <span style="color: #0ea5e9;">-1k..-500</span>
-                <span style="color: #3b82f6;">-500..-200</span>
-                <span style="color: #818cf8;">-200..0</span>
-                <span style="color: #10b981;">0..200</span>
-                <span style="color: #84cc16;">200..500</span>
-                <span style="color: #eab308;">500..800</span>
-                <span style="color: #f59e0b;">800..1k</span>
-                <span style="color: #ef4444;">1k..2k</span>
-                <span style="color: #b91c1c;">2k..4k</span>
-                <span style="color: #9333ea;">4k..5k</span>
-                <span style="color: #ec4899;">&gt;5k</span>
-            </div>
-
-            <div class="rb-chart-box">
-                <canvas id="rbChart"></canvas>
-            </div>
-
-            <div class="status-bar">
-                <span><span id="cen-pulse" class="pulse"></span><span id="cen-status">Portal PSE Live</span></span>
-                <span id="cen-update-time">--</span>
+                <div class="hourly-title">Najbliższe 36 godzin (przewiń ➔)</div>
+                <div id="fs-hourly" class="hourly" style="margin-top: 5px;"></div>
             </div>
         </div>
 
-        <!-- POGODA -->
+        <!-- POGODA (standardowy panel na głównym pulpicie) -->
         <div class="card">
             <h2>Pogoda ZG (Sieć Cieplna)</h2>
             <div class="wx-top">
@@ -946,36 +921,6 @@
             tempChart.$currentHourLabel = currentHour.slice(11, 13) + ':00';
         }
 
-        function updateFullscreenWeather(h, currentIdx, currentTemp) {
-            if (!h || currentIdx < 0) return;
-            
-            const idx3h = Math.min(currentIdx + 3, h.time.length - 1);
-            const temp3h = h.temperature_2m[idx3h];
-            const diff3h = temp3h - currentTemp;
-            const trendText = `${Math.round(temp3h)}°C (${diff3h >= 0 ? '+' : ''}${diff3h.toFixed(1)}°C)`;
-            
-            const windNow = Math.round(latestWeatherData.current.wind_speed_10m);
-            const gustNow = Math.round(latestWeatherData.current.wind_gusts_10m);
-
-            let rainText = 'Brak opadów';
-            for (let i = 1; i <= 3; i++) {
-                const target = currentIdx + i;
-                if (target < h.time.length) {
-                    const p = h.precipitation[target] || 0;
-                    const snow = h.snowfall[target] || 0;
-                    if (p > 0.1 || snow > 0.1) {
-                        rainText = snow > 0.1 ? `Śnieg za ~${i}h` : `Deszcz za ~${i}h`;
-                        break;
-                    }
-                }
-            }
-
-            $('fs-wx-temp').innerText = `${Math.round(currentTemp)}°C`;
-            $('fs-wx-trend').innerText = trendText;
-            $('fs-wx-wind').innerText = `${windNow} (porywy ${gustNow}) km/h`;
-            $('fs-wx-rain').innerText = rainText;
-        }
-
         async function refreshWeather() {
             if (weatherInFlight) return;
             weatherInFlight = true;
@@ -1023,8 +968,6 @@
                             }
                         }
                     }
-
-                    updateFullscreenWeather(h, currentIdx, currentTemp);
                 }
 
                 if (minTemp12h <= currentTemp - 5) {
@@ -1034,16 +977,33 @@
                     alertsHtml += `<div class="wx-alert wind">💨 SILNY WIATR: Znacznie zwiększone wychłodzenie budynków (porywy do ${Math.round(currentGusts)} km/h)</div>`;
                 }
                 
+                // Przypisanie do panelu głównego i pełnoekranowego
                 $('wx-alerts').innerHTML = alertsHtml;
                 const fsAlerts = $('fs-wx-alerts');
                 if (fsAlerts) fsAlerts.innerHTML = alertsHtml;
 
-                $('weather-temp').innerText = fmt(c.temperature_2m, 1) + '°C';
-                $('weather-desc').innerText = wmo(c.weather_code)[1] + ' ' + wmo(c.weather_code)[0];
-                $('wx-pressure').innerText = fmt(c.pressure_msl, 1) + ' hPa';
-                $('wx-humidity').innerText = Math.round(c.relative_humidity_2m) + ' %';
-                $('wx-dew').innerText = fmt(c.dew_point_2m, 1) + '°C';
-                $('wx-wind').innerText = `${Math.round(c.wind_speed_10m)} (${Math.round(c.wind_gusts_10m)}) km/h`;
+                const tempFormatted = fmt(c.temperature_2m, 1) + '°C';
+                const descFormatted = wmo(c.weather_code)[1] + ' ' + wmo(c.weather_code)[0];
+                const pressureFormatted = fmt(c.pressure_msl, 1) + ' hPa';
+                const humidityFormatted = Math.round(c.relative_humidity_2m) + ' %';
+                const dewFormatted = fmt(c.dew_point_2m, 1) + '°C';
+                const windFormatted = `${Math.round(c.wind_speed_10m)} (${Math.round(c.wind_gusts_10m)}) km/h`;
+
+                // Standardowy panel pogody
+                $('weather-temp').innerText = tempFormatted;
+                $('weather-desc').innerText = descFormatted;
+                $('wx-pressure').innerText = pressureFormatted;
+                $('wx-humidity').innerText = humidityFormatted;
+                $('wx-dew').innerText = dewFormatted;
+                $('wx-wind').innerText = windFormatted;
+
+                // Panel pogodowy w trybie fullscreen (prawa kolumna)
+                if ($('fs-weather-temp')) $('fs-weather-temp').innerText = tempFormatted;
+                if ($('fs-weather-desc')) $('fs-weather-desc').innerText = descFormatted;
+                if ($('fs-wx-pressure')) $('fs-wx-pressure').innerText = pressureFormatted;
+                if ($('fs-wx-humidity')) $('fs-wx-humidity').innerText = humidityFormatted;
+                if ($('fs-wx-dew')) $('fs-wx-dew').innerText = dewFormatted;
+                if ($('fs-wx-wind')) $('fs-wx-wind').innerText = windFormatted;
                 
                 renderHourly(h, c.time);
                 renderTempChart(h, c.time);
