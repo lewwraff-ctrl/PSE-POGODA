@@ -80,12 +80,7 @@
         .wx-top .value-huge { font-size: 2rem; margin: 0; }
 
         .hourly-title { font-size: 0.72rem; color: var(--text-muted); margin: 10px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        
-        /* PRZYWRÓCONY, WYRAŹNY SUWAK (SCROLLBAR) */
-        .hourly { 
-            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; 
-            scrollbar-width: auto; scrollbar-color: #64748b rgba(255,255,255,0.05); 
-        }
+        .hourly { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: auto; scrollbar-color: #64748b rgba(255,255,255,0.05); }
         .hourly::-webkit-scrollbar { height: 10px; }
         .hourly::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 5px; }
         .hourly::-webkit-scrollbar-thumb { background: #475569; border-radius: 5px; }
@@ -175,36 +170,36 @@
             </div>
         </div>
 
-        <!-- KSE -->
+        <!-- KSE (Potrójne bramkowanie omijające CORS) -->
         <div class="card" style="border: 2px solid var(--accent-blue);">
             <h2>Bilans KSE na żywo</h2>
             <div class="kse-box" style="margin-top: 6px;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
                         <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">ZAPOTRZEBOWANIE</td>
-                        <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.05rem; color: var(--accent-blue);" id="kse-demand">--</td>
+                        <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--accent-blue);" id="kse-demand">--</td>
                     </tr>
                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
                         <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">GENERACJA</td>
-                        <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.05rem; color: var(--accent-green);" id="kse-gen">--</td>
+                        <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--accent-green);" id="kse-gen">--</td>
                     </tr>
                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
                         <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">BILANS (SALDO)</td>
-                        <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.05rem; color: var(--accent-orange);" id="kse-saldo">--</td>
+                        <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--accent-orange);" id="kse-saldo">--</td>
                     </tr>
                     <tr>
                         <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">CZĘSTOTLIWOŚĆ</td>
-                        <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.05rem; color: var(--text-main);" id="kse-freq">--</td>
+                        <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--text-main);" id="kse-freq">--</td>
                     </tr>
                 </table>
             </div>
             <div class="status-bar">
-                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">API (PV Index)</span></span>
+                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">Mapa KSE (Połączono)</span></span>
                 <span id="kse-update-time">--</span>
             </div>
         </div>
 
-        <!-- POGODA (Z grubym, wygodnym suwakiem) -->
+        <!-- POGODA -->
         <div class="card">
             <h2>Pogoda (Zielona Góra)</h2>
             <div class="wx-top">
@@ -456,36 +451,58 @@
             try { const { series, date } = await loadRbPrices(); renderRbCard(series, date); renderRbChart(series); } catch (err) { renderRbError(err); }
         }
 
+        // ---------- KSE: Mechanizm wielobramkowy (omijający CORS) do mapy PSE ----------
         async function refreshKse() {
             try {
-                const targetUrl = 'https://pvindex.pl/api/v1/stats/pse-system/current';
+                const targetUrl = 'https://www.pse.pl/transmissionMapService';
+                
+                // Lista 3 niezależnych darmowych serwerów proxy omijających CORS
+                const proxies = [
+                    'https://corsproxy.io/?' + encodeURIComponent(targetUrl),
+                    'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl),
+                    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(targetUrl)
+                ];
+                
                 let j = null;
-
-                try {
-                    const res = await fetch(targetUrl, { cache: 'no-store' });
-                    if (!res.ok) throw new Error('Błąd HTTP ' + res.status);
-                    j = await res.json();
-                } catch (err) {
-                    const proxyUrl = 'https://api.allorigins.win/raw?url=';
-                    const resProxy = await fetch(proxyUrl + encodeURIComponent(targetUrl), { cache: 'no-store' });
-                    if (!resProxy.ok) throw new Error('Proxy error');
-                    j = await resProxy.json();
+                for (const proxy of proxies) {
+                    try {
+                        const res = await fetch(proxy, { cache: 'no-store' });
+                        if (!res.ok) continue;
+                        
+                        const data = await res.json();
+                        
+                        // AllOrigins zwraca dane jako string w polu contents, pozostałe zwracają czysty JSON
+                        if (data.contents) {
+                            try { j = JSON.parse(data.contents); } catch(e){}
+                        } else {
+                            j = data;
+                        }
+                        
+                        // Przerywamy pętlę, jeśli udało się wyciągnąć poprawne dane
+                        if (j && j.data && j.data.podsumowanie) break; 
+                    } catch (e) {
+                        console.warn('Proxy failed:', proxy);
+                    }
                 }
 
-                if (!j) throw new Error('Puste dane');
+                const s = j && j.data && j.data.podsumowanie;
+                if (!s) throw new Error('Wszystkie bramki proxy zablokowane');
 
-                function findVal(obj, keys) {
-                    if (!obj) return null;
-                    if (Array.isArray(obj)) obj = obj[obj.length - 1];
-                    const searchArea = [obj, obj.data, obj.current, obj.payload].filter(Boolean);
-                    for (let area of searchArea) { for (let k of keys) { if (area[k] !== undefined && area[k] !== null) return num(area[k]); } }
-                    return null;
+                // Konwersja formatu liczbowego z PSE ("23 000,50" na 23000.5)
+                function parsePSEVal(val) {
+                    if (val === null || val === undefined) return null;
+                    if (typeof val === 'number') return val;
+                    const clean = String(val).replace(/\s/g, '').replace(',', '.');
+                    const num = parseFloat(clean);
+                    return isNaN(num) ? null : num;
                 }
 
-                const demand = findVal(j, ['demand', 'zapotrzebowanie', 'load', 'zapotrzebowanieMW']);
-                const gen = findVal(j, ['generation', 'generacja', 'total_generation', 'generacjaMW']);
-                const saldo = findVal(j, ['balance', 'saldo', 'flow', 'exchange', 'saldoMW']);
-                const freq = findVal(j, ['frequency', 'czestotliwosc', 'freq']);
+                const demand = parsePSEVal(s.zapotrzebowanie);
+                const gen = parsePSEVal(s.generacja);
+                const freq = parsePSEVal(s.czestotliwosc);
+                
+                const saldoRow = (j.data.przesyly || []).find(p => String(p.id).toUpperCase() === 'SALDO');
+                const saldo = saldoRow ? parsePSEVal(saldoRow.wartosc) : null;
 
                 $('kse-demand').innerText = demand !== null ? Math.round(demand).toLocaleString('pl-PL') + ' MW' : '--';
                 $('kse-gen').innerText = gen !== null ? Math.round(gen).toLocaleString('pl-PL') + ' MW' : '--';
@@ -494,13 +511,13 @@
 
                 $('kse-pulse').classList.remove('err');
                 $('kse-status').classList.remove('err-text');
-                $('kse-status').innerText = 'API (PV Index)';
+                $('kse-status').innerText = 'Połączono (Proxy)';
                 $('kse-update-time').innerText = 'sprawdzono ' + nowStr();
 
             } catch (e) {
-                console.error('Błąd KSE (API):', e);
+                console.error('Błąd KSE:', e);
                 $('kse-demand').innerText = 'Błąd'; $('kse-gen').innerText = 'Błąd'; $('kse-saldo').innerText = '--'; $('kse-freq').innerText = '--';
-                $('kse-pulse').classList.add('err'); $('kse-status').classList.add('err-text'); $('kse-status').innerText = 'Błąd pobierania';
+                $('kse-pulse').classList.add('err'); $('kse-status').classList.add('err-text'); $('kse-status').innerText = 'Brak odpowiedzi';
             }
         }
 
