@@ -245,6 +245,35 @@
                         <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.1rem; color: var(--text-main);" id="kse-freq">--</td>
                     </tr>
                 </table>
+
+                <div style="margin-top: 20px;">
+                    <h3 style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">
+                        Struktura generacji
+                    </h3>
+
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 7px 4px; color: var(--text-muted); font-size: 0.78rem;">Źródła cieplne</td>
+                            <td id="kse-thermal" style="text-align: right; font-family: 'JetBrains Mono', monospace;">—</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 7px 4px; color: var(--text-muted); font-size: 0.78rem;">Elektrownie wodne</td>
+                            <td id="kse-hydro" style="text-align: right; font-family: 'JetBrains Mono', monospace;">—</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 7px 4px; color: var(--text-muted); font-size: 0.78rem;">Energetyka wiatrowa</td>
+                            <td id="kse-wind" style="text-align: right; font-family: 'JetBrains Mono', monospace;">—</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 7px 4px; color: var(--text-muted); font-size: 0.78rem;">Fotowoltaika (PV)</td>
+                            <td id="kse-pv" style="text-align: right; font-family: 'JetBrains Mono', monospace;">—</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 7px 4px; color: var(--text-muted); font-size: 0.78rem;">Pozostałe źródła</td>
+                            <td id="kse-other" style="text-align: right; font-family: 'JetBrains Mono', monospace;">—</td>
+                        </tr>
+                    </table>
+                </div>
             </div>
             <div class="status-bar">
                 <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">Wczytywanie...</span></span>
@@ -302,6 +331,42 @@
         const $ = id => document.getElementById(id);
         const pad = n => String(n).padStart(2, '0');
 
+        // --- HACK DLA KART W TLE ---
+        let audioCtx = null;
+        let keepAliveInterval = null;
+
+        function startKeepAlive() {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                const playSilence = () => {
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    gain.gain.value = 0; 
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.1);
+                };
+                
+                playSilence();
+                if (keepAliveInterval) clearInterval(keepAliveInterval);
+                keepAliveInterval = setInterval(playSilence, 10000); 
+            } catch(e) { console.log('Audio Keep-Alive nie wspierane'); }
+        }
+
+        function stopKeepAlive() {
+            if (keepAliveInterval) clearInterval(keepAliveInterval);
+        }
+
+        document.addEventListener('click', function initAudio() {
+            if (!soundMuted) startKeepAlive();
+            document.removeEventListener('click', initAudio);
+        }, { once: true });
+        // --------------------------------------------------------
+
         let mouseTimer;
         document.addEventListener('mousemove', () => {
             document.body.style.cursor = 'default';
@@ -339,7 +404,19 @@
             soundMuted = !soundMuted;
             localStorage.setItem('pse_sound_muted', soundMuted);
             updateSoundButton();
-            if (soundMuted && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+            if (soundMuted) {
+                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                stopKeepAlive();
+            } else {
+                startKeepAlive();
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.pause();
+                    window.speechSynthesis.resume();
+                    const msg = new SpeechSynthesisUtterance("Alerty w tle włączone.");
+                    msg.lang = 'pl-PL';
+                    window.speechSynthesis.speak(msg);
+                }
+            }
         }
 
         setInterval(() => { 
@@ -491,6 +568,8 @@
                 if (!soundMuted && lastNotifiedPeriod !== `${period}_${Math.round(price)}`) {
                     lastNotifiedPeriod = `${period}_${Math.round(price)}`;
                     if ('speechSynthesis' in window) { 
+                        window.speechSynthesis.pause();
+                        window.speechSynthesis.resume();
                         const msg = new SpeechSynthesisUtterance(speechText); 
                         msg.lang = 'pl-PL'; 
                         window.speechSynthesis.speak(msg); 
@@ -556,7 +635,6 @@
             try { const { series, date } = await loadRbPrices(); renderRbCard(series, date); renderRbChart(series); } catch (err) { renderRbError(err); }
         }
 
-        // ---------- KSE: ROZBUDOWANA OBSŁUGA WORKERA ----------
         async function refreshKse() {
             const proxyUrl = 'https://pse-kse-proxy.lewwraff.workers.dev/';
 
@@ -564,7 +642,6 @@
                 if (value === null || value === undefined || value === '') {
                     return null;
                 }
-
                 const number = Number(value);
                 return Number.isFinite(number) ? number : null;
             };
@@ -587,27 +664,24 @@
 
                 const data = await response.json();
 
-                // Obsługa odpowiedzi PV Index bezpośrednio
-                // oraz odpowiedzi opakowanej przez Worker.
                 const values = data.data &&
                     typeof data.data === 'object' &&
                     !Array.isArray(data.data)
                     ? { ...data, ...data.data }
                     : data;
 
-                // Nie nadpisuj ostatnich dobrych pomiarów
-                // odpowiedzią błędną lub pustą.
                 const demand = numberOrNull(values.demand);
                 const generation = numberOrNull(values.generation);
                 const frequency = numberOrNull(values.frequency);
 
+                const thermal = numberOrNull(values.thermal);
+                const hydro = numberOrNull(values.hydro);
+                const wind = numberOrNull(values.wind);
+                const pv = numberOrNull(values.pv);
+                const other = numberOrNull(values.other);
+
                 const flowKeys = [
-                    'flow_se',
-                    'flow_de',
-                    'flow_cz',
-                    'flow_sk',
-                    'flow_ua',
-                    'flow_lt'
+                    'flow_se', 'flow_de', 'flow_cz', 'flow_sk', 'flow_ua', 'flow_lt'
                 ];
 
                 const flowValues = flowKeys
@@ -624,24 +698,14 @@
                     throw new Error('Brak poprawnych danych PV Index');
                 }
 
-                // Bilans wymiany: suma przepływów zagranicznych.
                 const saldo = flowValues.length === flowKeys.length
                     ? flowValues.reduce((sum, value) => sum + value, 0)
                     : null;
 
-                if (demand !== null) {
-                    $('kse-demand').innerText = formatMW(demand);
-                }
-
-                if (generation !== null) {
-                    $('kse-gen').innerText = formatMW(generation);
-                }
-
-                if (saldo !== null) {
-                    // Dodajemy znak '+' dla wartości dodatnich, żeby format pasował wizualnie
-                    $('kse-saldo').innerText = saldo > 0 ? '+' + formatMW(saldo) : formatMW(saldo);
-                }
-
+                if (demand !== null) $('kse-demand').innerText = formatMW(demand);
+                if (generation !== null) $('kse-gen').innerText = formatMW(generation);
+                if (saldo !== null) $('kse-saldo').innerText = saldo > 0 ? '+' + formatMW(saldo) : formatMW(saldo);
+                
                 if (frequency !== null) {
                     $('kse-freq').innerText =
                         `${frequency.toLocaleString('pl-PL', {
@@ -649,6 +713,12 @@
                             maximumFractionDigits: 3
                         })} Hz`;
                 }
+
+                if (thermal !== null) $('kse-thermal').innerText = formatMW(thermal);
+                if (hydro !== null) $('kse-hydro').innerText = formatMW(hydro);
+                if (wind !== null) $('kse-wind').innerText = formatMW(wind);
+                if (pv !== null) $('kse-pv').innerText = formatMW(pv);
+                if (other !== null) $('kse-other').innerText = formatMW(other);
 
                 const pulse = $('kse-pulse');
                 const status = $('kse-status');
@@ -672,10 +742,14 @@
                     )}`
                     : `Sprawdzono: ${nowStr()}`;
 
+                console.log('KSE z PV Index:', {
+                    demand, generation, saldo, frequency,
+                    thermal, hydro, wind, pv, other,
+                    timestamp, stale
+                });
+
             } catch (error) {
                 console.error('Błąd KSE:', error);
-
-                // Nie kasujemy ostatnich wartości przy awarii.
                 $('kse-pulse').classList.add('err');
                 $('kse-status').classList.add('err-text');
                 $('kse-status').innerText = 'Błąd PV Index — ostatnie dane zachowane';
