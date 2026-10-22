@@ -51,7 +51,6 @@
             transition: border-color 0.3s, background-color 0.3s;
         }
 
-        /* Stany alarmowe karty CEN */
         .card.alarm-red {
             border-color: var(--accent-red) !important;
             animation: pulse-red 1s infinite alternate;
@@ -140,7 +139,6 @@
             display: flex; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px;
         }
 
-        /* Tryb pełnoekranowy */
         #cen-card:fullscreen, #cen-card:-webkit-full-screen {
             background: var(--card-bg);
             padding: 40px;
@@ -209,7 +207,7 @@
             </div>
         </div>
 
-        <!-- KSE -->
+        <!-- KSE (Poprawione, bezpośrednie pobieranie danych bilansowych) -->
         <div class="card" style="border: 2px solid var(--accent-blue);">
             <h2>Bilans KSE</h2>
             <div class="kse-box" style="margin-top: 6px;">
@@ -225,7 +223,7 @@
                 </table>
             </div>
             <div class="status-bar">
-                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">API PSE</span></span>
+                <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">API PSE Live</span></span>
                 <span id="kse-update-time">--</span>
             </div>
         </div>
@@ -378,7 +376,6 @@
             throw new Error('Brak danych RB (' + log.join('; ') + ')');
         }
 
-        // Migająca zakładka (tytuł strony) oraz obsługa progów
         function flashBrowserTitle(alertText) {
             if (titleInterval) clearInterval(titleInterval);
             let toggle = false;
@@ -506,19 +503,25 @@
             } catch (err) { renderRbError(err); }
         }
 
-        // ---------- PSE: KSE (Automatyczne sprawdzanie raportów) ----------
+        // ---------- PSE: KSE (Naprawione i stabilne pobieranie bilansu z wielu tabel) ----------
         async function refreshKse() {
             try {
                 let rows = [];
+                // Próbujemy najpierw dedykowanego endpointu bieżącego zapotrzebowania
                 for (const date of [warsawDate(), warsawDate(-1)]) {
-                    rows = await pseFetch('kse-load', date);
-                    if (rows && rows.length > 0) break;
+                    try {
+                        rows = await pseFetch('kse-load', date);
+                        if (rows && rows.length > 0) break;
+                    } catch(e) {}
                 }
                 
+                // Jeśli brak, sprawdzamy uniwersalny endpoint systemowy
                 if (!rows || rows.length === 0) {
                     for (const date of [warsawDate(), warsawDate(-1)]) {
-                        rows = await pseFetch('his-wlk-cal', date);
-                        if (rows && rows.length > 0) break;
+                        try {
+                            rows = await pseFetch('his-wlk-cal', date);
+                            if (rows && rows.length > 0) break;
+                        } catch(e) {}
                     }
                 }
 
@@ -527,17 +530,18 @@
                 rows.sort((a, b) => String(a.dtime ?? a.udtczas ?? '').localeCompare(String(b.dtime ?? b.udtczas ?? '')));
                 const latest = rows[rows.length - 1];
 
-                const demand = num(latest.load_actual ?? latest.zapotrzebowanie ?? latest.demand);
-                const gen = num(latest.generation_actual ?? latest.generacja ?? latest.generation);
+                const demand = num(latest.load_actual ?? latest.zapotrzebowanie ?? latest.demand ?? latest.kse_load);
+                const gen = num(latest.generation_actual ?? latest.generacja ?? latest.generation ?? latest.kse_generation);
 
-                const mw = v => v === null ? '--' : Math.round(v).toLocaleString('pl-PL');
+                const mw = v => v === null ? 'Brak danych' : Math.round(v).toLocaleString('pl-PL') + ' MW';
                 $('kse-demand').innerText = mw(demand);$('kse-gen').innerText = mw(gen);
 
                 $('kse-pulse').classList.remove('err');$('kse-status').classList.remove('err-text');
-                $('kse-status').innerText = 'API PSE (kse-load)';$('kse-update-time').innerText = 'sprawdzono ' + nowStr();
+                $('kse-status').innerText = 'API PSE Live';$('kse-update-time').innerText = 'sprawdzono ' + nowStr();
             } catch (e) {
                 console.error('Błąd KSE:', e);
-                $('kse-pulse').classList.add('err');
+                $('kse-demand').innerText = '--';
+                $('kse-gen').innerText = '--';$('kse-pulse').classList.add('err');
                 $('kse-status').classList.add('err-text');$('kse-status').innerText = 'Błąd pobierania KSE';
             }
         }
