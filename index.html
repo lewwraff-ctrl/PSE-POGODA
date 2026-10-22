@@ -34,9 +34,10 @@
         h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
         .clock-box { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 700; color: var(--accent-blue); }
         
+        /* Układ 3 kolumn: CEN, KSE, Pogoda */
         .grid { 
             display: grid; 
-            grid-template-columns: 1.6fr 1.1fr 0.9fr; 
+            grid-template-columns: 1.6fr 1fr 1fr; 
             gap: 20px; 
             margin-bottom: 24px; 
         }
@@ -98,6 +99,7 @@
         .wx-top .value-huge { font-size: 2rem; margin: 0; }
 
         .hourly-title { font-size: 0.72rem; color: var(--text-muted); margin: 10px 0 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* Płynny przewijak godzinowy */
         .hourly { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; scrollbar-color: var(--accent-blue) var(--border-color); }
         .hourly::-webkit-scrollbar { height: 5px; }
         .hourly::-webkit-scrollbar-thumb { background: var(--accent-blue); border-radius: 3px; }
@@ -239,7 +241,7 @@
             </div>
         </div>
 
-        <!-- POGODA -->
+        <!-- POGODA (Zmniejszona z suwakiem na 36h) -->
         <div class="card">
             <h2>Pogoda (Zielona Góra)</h2>
             <div class="wx-top">
@@ -559,7 +561,7 @@
             }
         }
 
-        // ---------- Pogoda (Open-Meteo) - 36 godzin ----------
+        // ---------- Pogoda (Open-Meteo) - 36 godzin z suwakiem ----------
         const WMO = {
             0: ['Bezchmurnie', '☀️'], 1: ['Prawie bezchmurnie', '🌤️'], 2: ['Częściowe zachmurzenie', '⛅'], 3: ['Pochmurno', '☁️'],
             45: ['Mgła', '🌫️'], 61: ['Lekki deszcz', '🌦️'], 63: ['Deszcz', '🌧️'], 71: ['Lekki śnieg', '🌨️'], 73: ['Śnieg', '❄️'], 95: ['Burza', '⛈️']
