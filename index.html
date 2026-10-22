@@ -34,9 +34,10 @@
         h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
         .clock-box { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 700; color: var(--accent-blue); }
         
+        /* Proporcje zablokowane przed rozpychaniem */
         .grid { 
             display: grid; 
-            grid-template-columns: 1.7fr 1fr 1.1fr; 
+            grid-template-columns: 1.8fr 1fr 1.3fr; 
             gap: 20px; 
             margin-bottom: 24px; 
         }
@@ -49,6 +50,7 @@
             border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
             display: flex; flex-direction: column;
             transition: border-color 0.3s, background-color 0.3s;
+            min-width: 0; /* CRITICAL FIX: Zapobiega rozpychaniu kolumn przez suwaki */
         }
 
         .card.alarm-red { border-color: var(--accent-red) !important; animation: pulse-red 1s infinite alternate; }
@@ -62,7 +64,7 @@
         .card h2 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
         .card .status-bar { margin-top: auto; }
 
-        .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 3.8rem; font-weight: 800; margin: 10px 0; letter-spacing: -1px; }
+        .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 3.8rem; font-weight: 800; margin: 10px 0; letter-spacing: -1px; white-space: nowrap; }
         .sub-info { font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; }
         .period {
             display: inline-block; margin-top: 4px; padding: 6px 12px; border-radius: 6px;
@@ -80,18 +82,23 @@
         .wx-top .value-huge { font-size: 2rem; margin: 0; }
 
         .hourly-title { font-size: 0.72rem; color: var(--text-muted); margin: 10px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .hourly { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: auto; scrollbar-color: #64748b rgba(255,255,255,0.05); }
-        .hourly::-webkit-scrollbar { height: 10px; }
-        .hourly::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 5px; }
-        .hourly::-webkit-scrollbar-thumb { background: #475569; border-radius: 5px; }
-        .hourly::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Zoptymalizowany suwak pogody, który nie rozbija siatki Grid */
+        .hourly { 
+            display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; 
+            scrollbar-width: thin; scrollbar-color: var(--accent-blue) rgba(255,255,255,0.05); 
+        }
+        .hourly::-webkit-scrollbar { height: 8px; }
+        .hourly::-webkit-scrollbar-track { background: rgba(0,0,0,0.15); border-radius: 4px; }
+        .hourly::-webkit-scrollbar-thumb { background: var(--accent-blue); border-radius: 4px; }
+        .hourly::-webkit-scrollbar-thumb:hover { background: #60a5fa; }
 
         .hour-cell {
-            flex: 0 0 56px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 8px; padding: 6px 4px; text-align: center; font-size: 0.75rem;
+            flex: 0 0 54px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px; padding: 6px 3px; text-align: center; font-size: 0.7rem;
         }
         .hour-cell.now { border-color: var(--accent-orange); background: rgba(245,158,11,0.05); }
-        .hour-cell .h { color: var(--text-muted); font-weight: 600; font-size: 0.7rem; }
+        .hour-cell .h { color: var(--text-muted); font-weight: 600; font-size: 0.65rem; }
         .hour-cell .ic { font-size: 1.1rem; margin: 3px 0; }
         .hour-cell .t { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 0.85rem; }
         .hour-cell .p { margin-top: 3px; min-height: 1.1em; color: #60a5fa; font-size: 0.65rem; }
@@ -203,7 +210,7 @@
         <div class="card">
             <h2>Pogoda (Zielona Góra)</h2>
             <div class="wx-top">
-                <div id="weather-temp" class="value-huge" style="font-size: 2rem;">--°C</div>
+                <div id="weather-temp" class="value-huge" style="font-size: 2.2rem;">--°C</div>
                 <div id="weather-desc" style="font-size: 0.75rem; color: var(--text-muted);">Pobieranie...</div>
             </div>
 
@@ -479,15 +486,10 @@
                     return sum + (Number.isFinite(value) ? value : 0);
                 }, 0);
 
-                const setText = (id, value) => {
-                    const element = document.getElementById(id);
-                    if (element) element.textContent = value;
-                };
-
-                setText('kse-demand', Number.isFinite(demand) ? `${demand.toLocaleString('pl-PL')} MW` : '—');
-                setText('kse-gen', Number.isFinite(generation) ? `${generation.toLocaleString('pl-PL')} MW` : '—');
-                setText('kse-saldo', `${saldo > 0 ? '+' : ''}${saldo.toLocaleString('pl-PL')} MW`);
-                setText('kse-freq', Number.isFinite(frequency) ? `${frequency.toLocaleString('pl-PL', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} Hz` : '—');
+                $('kse-demand').innerText = Number.isFinite(demand) ? `${demand.toLocaleString('pl-PL')} MW` : '—';
+                $('kse-gen').innerText = Number.isFinite(generation) ? `${generation.toLocaleString('pl-PL')} MW` : '—';
+                $('kse-saldo').innerText = `${saldo > 0 ? '+' : ''}${saldo.toLocaleString('pl-PL')} MW`;
+                $('kse-freq').innerText = Number.isFinite(frequency) ? `${frequency.toLocaleString('pl-PL', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} Hz` : '—';
 
                 // Aktualizacja statusu
                 $('kse-pulse').classList.remove('err');
