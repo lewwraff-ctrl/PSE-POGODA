@@ -605,13 +605,9 @@
             } catch (err) { renderRbError(err); }
         }
 
-        // ---------- KSE: pobieranie danych z dwóch raportów PSE ----------
-        // KSE-load jest podstawowym źródłem rzeczywistego zapotrzebowania.
-        // his-wlk-cal dostarcza m.in. demand, jg oraz swm_p.
-        // Publiczny raport nie gwarantuje pomiaru częstotliwości sieci,
-        // więc nie podstawiamy fikcyjnego osobne źródło wymagane.
-        let lastGoodKse = null;
-
+        // ---------- KSE: raporty PSE z kontrolą świeżości ----------
+        // UWAGA: raporty kse-load i his-wlk-cal nie są tym samym źródłem co mapa chwilowa PSE.
+        // Nie wolno prezentować wczorajszych ani starych rekordów jako danych na żywo.
         function firstNumber(row, keys) {
             for (const key of keys) {
                 const value = num(row && row[key]);
@@ -621,124 +617,100 @@
         }
 
         function rowTime(row) {
-            return String(row?.dtime ?? row?.udtczas ?? row?.udtczas_oreb ??
-                row?.period ?? row?.publication_ts ?? '');
+            return String(row?.dtime ?? row?.period ?? row?.udtczas ?? row?.udtczas_oreb ??
+                row?.publication_ts ?? row?.source_datetime ?? '');
         }
 
-        function newestRow(rows) {
-            return [...rows].sort((a, b) => rowTime(a).localeCompare(rowTime(b))).at(-1) || null;
+        function timeMs(row) {
+            const raw = rowTime(row);
+            const ms = Date.parse(raw);
+            return Number.isFinite(ms) ? ms : -Infinity;
+        }
+
+        function newestRowWithValue(rows, keys) {
+            return [...rows]
+                .filter(r => firstNumber(r, keys) !== null)
+                .sort((a, b) => timeMs(a) - timeMs(b))
+                .at(-1) || null;
         }
 
         async function loadKseRows(endpoint) {
-            let lastError = null;
-            for (const date of [warsawDate(), warsawDate(-1)]) {
-                try {
-                    const rows = await pseFetch(endpoint, date);
-                    if (rows.length) return rows;
-                } catch (err) {
-                    lastError = err;
-                }
-            }
-            if (lastError) throw lastError;
-            return [];
+            // Tylko bieżąca doba. Celowo bez fallbacku do wczoraj, który powodował pokazywanie starych danych.
+            const date = warsawDate();
+            return await pseFetch(endpoint, date);
         }
 
-        // Zwraca najnowszy rekord, w którym konkretne pole faktycznie ma liczbę.
-        // Ważne: najnowszy wiersz kse-load może dotyczyć prognozy i mieć load_actual = null.
-        function latestNumberRow(rows, keys) {
-            const sorted = [...(rows || [])].sort((a, b) => rowTime(b).localeCompare(rowTime(a)));
-            for (const row of sorted) {
-                const value = firstNumber(row, keys);
-                if (value !== null && Number.isFinite(value)) return { row, value };
-            }
-            return { row: null, value: null };
+        function clearKseValues(message) {
+            $('kse-demand').innerText = '--';
+            $('kse-gen').innerText = '--';
+            $('kse-saldo').innerText = '--';
+            $('kse-freq').innerText = 'brak danych';
+            $('kse-update-time').innerText = message;
         }
 
         async function refreshKseInner() {
             const errors = [];
             let loadRows = [];
             let summaryRows = [];
+            try { loadRows = await loadKseRows('kse-load'); }
+            catch (e) { errors.push('kse-load: ' + explain(e)); }
+            try { summaryRows = await loadKseRows('his-wlk-cal'); }
+            catch (e) { errors.push('his-wlk-cal: ' + explain(e)); }
 
-            // Zapotrzebowanie: najpierw rzeczywisty pomiar z raportu KSE-load.
-            try {
-                loadRows = await loadKseRows('kse-load');
-                if (!loadRows.length) errors.push('kse-load: API zwróciło 0 rekordów dla dziś i wczoraj');
-            } catch (e) {
-                errors.push('kse-load: ' + explain(e));
+            const demandKeys = ['load_actual', 'demand', 'zapotrzebowanie', 'kse_load'];
+            const genKeys = ['jg', 'generation_actual', 'generacja', 'generation', 'kse_generation'];
+            const demandRow = newestRowWithValue(loadRows, demandKeys) || newestRowWithValue(summaryRows, demandKeys);
+            const genRow = newestRowWithValue(summaryRows, genKeys);
+            const saldoRow = newestRowWithValue(summaryRows, ['swm_p', 'swm_np', 'saldo', 'exchange_balance']);
+
+            const demand = firstNumber(demandRow, demandKeys);
+            const generation = firstNumber(genRow, genKeys);
+            let saldo = null;
+            if (saldoRow) {
+                const parallel = num(saldoRow.swm_p);
+                const nonParallel = num(saldoRow.swm_np);
+                if (parallel !== null && nonParallel !== null) saldo = parallel + nonParallel;
+                else saldo = firstNumber(saldoRow, ['saldo', 'exchange_balance', 'swm_p', 'swm_np']);
             }
 
-            // Raport zbiorczy: generacja oraz saldo wymiany.
-            try {
-                summaryRows = await loadKseRows('his-wlk-cal');
-                if (!summaryRows.length) errors.push('his-wlk-cal: API zwróciło 0 rekordów dla dziś i wczoraj');
-            } catch (e) {
-                errors.push('his-wlk-cal: ' + explain(e));
-            }
+            const usedRows = [demandRow, genRow, saldoRow].filter(Boolean);
+            const newestMs = usedRows.length ? Math.max(...usedRows.map(timeMs)) : NaN;
+            const newestDate = Number.isFinite(newestMs) ? new Date(newestMs) : null;
+            const ageMinutes = newestDate ? (Date.now() - newestDate.getTime()) / 60000 : Infinity;
 
-            const demandResult = latestNumberRow(loadRows, ['load_actual', 'demand', 'zapotrzebowanie', 'kse_load']);
-            const summaryDemand = latestNumberRow(summaryRows, ['demand', 'load_actual', 'zapotrzebowanie', 'kse_load']);
-            const generationResult = latestNumberRow(summaryRows, ['jg', 'generation_actual', 'generacja', 'generation', 'kse_generation']);
-            const saldoResult = latestNumberRow(summaryRows, ['swm_p', 'swm_np', 'swm_r', 'saldo', 'exchange_balance']);
-
-            const demand = demandResult.value ?? summaryDemand.value;
-            const generation = generationResult.value;
-            const saldo = saldoResult.value;
-
+            // Raporty te mają opóźnienie publikacji. Jeśli najnowszy rekord jest starszy niż 60 min,
+            // nie pokazujemy go jako bieżącego bilansu.
             if (demand === null && generation === null && saldo === null) {
-                throw new Error(errors.length ? errors.join(' | ') : 'PSE zwróciło rekordy, ale nie znaleziono liczbowych wartości pomiarowych. Szczegóły w konsoli przeglądarki.');
+                throw new Error(errors.length ? errors.join(' | ') : 'PSE nie zwróciło wartości liczbowych dla dzisiejszej doby');
             }
-
-            const usedRows = [demandResult.row, summaryDemand.row, generationResult.row, saldoResult.row].filter(Boolean);
-            const timestamps = usedRows.map(rowTime).filter(Boolean).sort();
-            const timestamp = timestamps.at(-1) || null;
-            const snapshot = { demand, generation, saldo, timestamp, checkedAt: Date.now() };
-            lastGoodKse = snapshot;
+            if (!Number.isFinite(ageMinutes) || ageMinutes < -10 || ageMinutes > 60) {
+                clearKseValues('Brak świeżych danych z raportów PSE · ostatni rekord jest nieaktualny');
+                $('kse-pulse').classList.add('err');
+                $('kse-status').classList.add('err-text');
+                $('kse-status').innerText = 'Dane nieaktualne — nie pokazuję starych wartości';
+                console.warn('KSE: rekord poza limitem świeżości', { ageMinutes, demandRow, genRow, saldoRow });
+                return;
+            }
 
             $('kse-demand').innerText = demand !== null ? Math.round(demand).toLocaleString('pl-PL') + ' MW' : '--';
             $('kse-gen').innerText = generation !== null ? Math.round(generation).toLocaleString('pl-PL') + ' MW' : '--';
-            $('kse-saldo').innerText = saldo !== null
-                ? (saldo > 0 ? '+' : '') + Math.round(saldo).toLocaleString('pl-PL') + ' MW'
-                : '--';
-
-            $('kse-freq').innerText = 'osobne źródło wymagane';
-            $('kse-freq').title = 'Raporty kse-load i his-wlk-cal nie zawierają pomiaru częstotliwości sieci.';
-
+            $('kse-saldo').innerText = saldo !== null ? (saldo > 0 ? '+' : '') + Math.round(saldo).toLocaleString('pl-PL') + ' MW' : '--';
+            $('kse-freq').innerText = 'brak danych';
+            $('kse-freq').title = 'Częstotliwość nie jest publikowana w raportach kse-load / his-wlk-cal.';
             $('kse-pulse').classList.remove('err');
             $('kse-status').classList.remove('err-text');
-            $('kse-status').innerText = errors.length ? 'Częściowe dane · ' + errors.join(' | ') : 'API PSE · OK';
-            $('kse-update-time').innerText =
-                (timestamp ? 'Dane: ' + timestamp.replace('T', ' ').slice(0, 16) + ' · ' : '') +
-                'sprawdzono ' + nowStr();
-            console.info('[PSE KSE] diagnostyka', {
-                loadRows: loadRows.length, summaryRows: summaryRows.length,
-                demand: demandResult, summaryDemand, generation: generationResult, saldo: saldoResult, errors
-            });
+            $('kse-status').innerText = errors.length ? 'Częściowe dane raportowe PSE · ' + errors.join(' | ') : 'Raporty PSE · dane nie są chwilową mapą KSE';
+            $('kse-update-time').innerText = 'Ostatni rekord: ' + newestDate.toLocaleString('pl-PL', { timeZone: TZ }) + ' · wiek ' + Math.max(0, Math.round(ageMinutes)) + ' min';
         }
 
         async function refreshKse() {
-            try {
-                await refreshKseInner();
-            } catch (err) {
-                renderKseError(err);
-            }
-        }
-
-        function renderKseError(err) {
-            console.error('Błąd KSE:', err);
-            $('kse-pulse').classList.add('err');
-            $('kse-status').classList.add('err-text');
-            $('kse-status').innerText = 'Błąd odświeżania: ' + explain(err);
-
-            // Zachowaj ostatni poprawny pomiar zamiast kasować go przy chwilowym błędzie.
-            if (lastGoodKse) {
-                const ageMin = Math.max(1, Math.round((Date.now() - lastGoodKse.checkedAt) / 60000));
-                $('kse-update-time').innerText = `Ostatnie poprawne dane · ${ageMin} min temu`;
-            } else {
-                $('kse-demand').innerText = 'Brak danych';
-                $('kse-gen').innerText = 'Brak danych';
-                $('kse-saldo').innerText = '--';
-                $('kse-freq').innerText = 'osobne źródło wymagane';
-                $('kse-update-time').innerText = 'Nie pobrano jeszcze poprawnych danych';
+            try { await refreshKseInner(); }
+            catch (err) {
+                console.error('Błąd KSE:', err);
+                $('kse-pulse').classList.add('err');
+                $('kse-status').classList.add('err-text');
+                $('kse-status').innerText = 'Brak aktualnych danych: ' + explain(err);
+                clearKseValues('Nie udało się pobrać aktualnych danych');
             }
         }
 
