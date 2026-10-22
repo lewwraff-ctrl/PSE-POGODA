@@ -251,9 +251,17 @@
                         <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">BILANS (SALDO)</td>
                         <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.05rem; color: var(--accent-orange);" id="kse-saldo">--</td>
                     </tr>
-                    <tr>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
                         <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">CZĘSTOTLIWOŚĆ</td>
                         <td style="text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.05rem; color: var(--text-main);" id="kse-freq">--</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                        <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">STATUS PSE · IGCC</td>
+                        <td style="text-align: right; font-weight: 800; font-size: 0.9rem;" id="kse-igcc">Odczyt niedostępny</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 4px; color: var(--text-muted); font-weight: 600; font-size: 0.75rem;">STATUS PSE · PICASSO</td>
+                        <td style="text-align: right; font-weight: 800; font-size: 0.9rem;" id="kse-picasso">Odczyt niedostępny</td>
                     </tr>
                 </table>
             </div>
@@ -262,33 +270,9 @@
                 <span id="kse-update-time">--</span>
             </div>
             <div style="margin-top:8px;color:var(--text-muted);font-size:0.72rem;line-height:1.45;">
-                Zapotrzebowanie, generacja i saldo: raporty PSE (mogą być opóźnione).
-                Częstotliwość: Energy-Charts, pomiar sieci synchronicznej Europy kontynentalnej.
+                Dane raportowe PSE mogą być opóźnione; nie są równoznaczne z chwilową mapą KSE.
+                Statusy IGCC/PICASSO wymagają odczytu z aplikacji mapy PSE.
             </div>
-        </div>
-
-        <!-- OFICJALNA MAPA KSE PSE: źródło odniesienia dla danych chwilowych i statusów -->
-        <div class="card dashboard-card" id="pse-live-map-card" draggable="true" style="border:2px solid var(--accent-green); grid-column: 1 / -1;">
-            <h2>Oficjalna mapa KSE — PSE</h2>
-            <p style="color:var(--text-muted);font-size:0.82rem;line-height:1.5;margin:0 0 10px;">
-                To osadzona strona PSE, na której są publikowane chwilowe wartości zapotrzebowania, generacji, saldo wymiany,
-                częstotliwość oraz statusy IGCC i PICASSO. To źródło referencyjne, gdy raporty API w kafelku powyżej są opóźnione.
-            </p>
-            <div style="border:1px solid rgba(128,128,128,.3);border-radius:10px;overflow:hidden;background:#fff;">
-                <iframe title="Oficjalna mapa KSE PSE" src="https://www.pse.pl/dane-systemowe"
-                    loading="lazy" referrerpolicy="strict-origin-when-cross-origin"
-                    style="display:block;width:100%;height:760px;border:0;background:#fff;"
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation-by-user-activation">
-                </iframe>
-            </div>
-            <div class="status-bar" style="margin-top:10px;">
-                <span>Źródło: Polskie Sieci Elektroenergetyczne</span>
-                <a href="https://www.pse.pl/dane-systemowe" target="_blank" rel="noopener noreferrer" style="color:var(--accent-blue);font-weight:700;">Otwórz mapę PSE w nowej karcie ↗</a>
-            </div>
-            <p style="color:var(--text-muted);font-size:0.72rem;line-height:1.45;margin:8px 0 0;">
-                Jeśli PSE zablokuje wyświetlanie strony w ramce, użyj linku „Otwórz mapę PSE w nowej karcie”.
-                Własny kafelek API pozostaje widoczny, ale jego czas rekordu należy traktować jako część informacji o jakości danych.
-            </p>
         </div>
 
         <!-- POGODA (Zgrabna, kompaktowa, z suwakiem na 36h) -->
@@ -706,13 +690,13 @@
             const newestDate = Number.isFinite(newestMs) ? new Date(newestMs) : null;
             const ageMinutes = newestDate ? (Date.now() - newestDate.getTime()) / 60000 : Infinity;
 
-            // Raporty te mają opóźnienie publikacji. Jeśli najnowszy rekord jest starszy niż 60 min,
-            // nie pokazujemy go jako bieżącego bilansu.
+            // Raporty dobowe nie są źródłem chwilowym. Nie pokazujemy ich jako aktualnych,
+            // jeśli rekord jest starszy niż 5 minut; lepiej pokazać brak niż nieaktualny pomiar.
             if (demand === null && generation === null && saldo === null) {
                 throw new Error(errors.length ? errors.join(' | ') : 'PSE nie zwróciło wartości liczbowych dla dzisiejszej doby');
             }
-            if (!Number.isFinite(ageMinutes) || ageMinutes < -10 || ageMinutes > 60) {
-                clearKseValues('Brak świeżych danych z raportów PSE · ostatni rekord jest nieaktualny');
+            if (!Number.isFinite(ageMinutes) || ageMinutes < -10 || ageMinutes > 5) {
+                clearKseValues('Brak świeżych danych PSE · raport starszy niż 5 min');
                 $('kse-pulse').classList.add('err');
                 $('kse-status').classList.add('err-text');
                 $('kse-status').innerText = 'Dane nieaktualne — nie pokazuję starych wartości';
@@ -725,9 +709,24 @@
             $('kse-saldo').innerText = saldo !== null ? (saldo > 0 ? '+' : '') + Math.round(saldo).toLocaleString('pl-PL') + ' MW' : '--';
             $('kse-pulse').classList.remove('err');
             $('kse-status').classList.remove('err-text');
-            $('kse-status').innerText = errors.length ? 'Częściowe dane raportowe PSE · ' + errors.join(' | ') : 'Raporty PSE · dane nie są chwilową mapą KSE';
+            $('kse-status').innerText = errors.length ? 'Częściowe dane raportowe PSE · ' + errors.join(' | ') : 'Raporty PSE · odczyt nie jest chwilową mapą KSE';
             $('kse-update-time').innerText = 'Ostatni rekord: ' + newestDate.toLocaleString('pl-PL', { timeZone: TZ }) + ' · wiek ' + Math.max(0, Math.round(ageMinutes)) + ' min';
         }
+
+        // Statusy IGCC/PICASSO: PSE pokazuje je na stronie mapy, ale nie znaleziono
+        // publicznego, udokumentowanego endpointu umożliwiającego pobranie ich z pliku lokalnego.
+        // Nie wpisujemy na sztywno "Aktywny", żeby nie podawać niezweryfikowanego stanu.
+        function setPseStatusUnavailable() {
+            for (const id of ['kse-igcc', 'kse-picasso']) {
+                const el = $(id);
+                if (el) {
+                    el.innerText = 'sprawdź w PSE';
+                    el.style.color = 'var(--text-muted)';
+                    el.title = 'Brak potwierdzonego automatycznego źródła statusu';
+                }
+            }
+        }
+        setPseStatusUnavailable();
 
         // ---------- Częstotliwość sieci: Energy-Charts ----------
         // Pomiar z Freiburga (DE-Freiburg) dotyczy wspólnej sieci synchronicznej Europy kontynentalnej.
