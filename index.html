@@ -137,6 +137,8 @@
         button:hover { background: #1d4ed8; }
         button.secondary { background: #334155; }
         button.secondary:hover { background: #475569; }
+        button.muted { background: #ef4444; }
+        button.muted:hover { background: #dc2626; }
 
         .threshold-info {
             font-size: 0.8rem; color: var(--text-muted); margin-top: 12px;
@@ -177,8 +179,9 @@
             <h1>⚡ PSE + Pogoda</h1>
             <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny RB i Bilans KSE z PSE + pogoda Open-Meteo (Zielona Góra)</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
             <div id="clock" class="clock-box">--:--:--</div>
+            <button id="sound-toggle-btn" class="secondary" onclick="toggleSound()">🔊 Dźwięk: WŁ</button>
             <button onclick="refreshDashboard()">Odśwież dane</button>
         </div>
     </header>
@@ -286,9 +289,32 @@
         let tempChart = null;
         let lastNotifiedPeriod = null; 
         let titleInterval = null;
+        let soundMuted = localStorage.getItem('pse_sound_muted') === 'true';
 
         const $ = id => document.getElementById(id);
         const pad = n => String(n).padStart(2, '0');
+
+        // Obsługa wyciszenia dźwięku
+        function updateSoundButton() {
+            const btn = $('sound-toggle-btn');
+            if (soundMuted) {
+                btn.innerText = '🔇 Dźwięk: WYŁ';
+                btn.className = 'muted';
+            } else {
+                btn.innerText = '🔊 Dźwięk: WŁ';
+                btn.className = 'secondary';
+            }
+        }
+        updateSoundButton();
+
+        function toggleSound() {
+            soundMuted = !soundMuted;
+            localStorage.setItem('pse_sound_muted', soundMuted);
+            updateSoundButton();
+            if (soundMuted && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Zatrzymaj mowę jeśli lektor mówi
+            }
+        }
 
         function toggleFullscreen() {
             const elem = $('cen-card');
@@ -434,7 +460,7 @@
 
             if (alertType) {
                 flashBrowserTitle(titleAlert);
-                if (lastNotifiedPeriod !== `${period}_${Math.round(price)}`) {
+                if (!soundMuted && lastNotifiedPeriod !== `${period}_${Math.round(price)}`) {
                     lastNotifiedPeriod = `${period}_${Math.round(price)}`;
                     if ('speechSynthesis' in window) {
                         const msg = new SpeechSynthesisUtterance(speechText);
