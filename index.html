@@ -268,7 +268,7 @@
         </div>
 
         <div class="side-col">
-            <!-- NOWY KAFELEK: BILANS I SYSTEM KSE -->
+            <!-- KAFELEK KSE -->
             <div class="card">
                 <h2>System Elektroenergetyczny (KSE)</h2>
                 <div class="metrics-grid">
@@ -486,7 +486,6 @@
         }
         function explain(err) { return (err && err.name === 'TypeError') ? 'brak dostępu do sieci' : (err && err.name === 'AbortError') ? 'przekroczono czas oczekiwania' : String(err && err.message || err); }
 
-        // Pobieranie danych z PSE z automatycznym wsparciem CORS Proxy w przypadku blokady domenowej (np. na GitHub Pages)
         async function pseFetch(endpoint, businessDate) {
             let directUrl = PSE_API + endpoint + '?$filter=' + encodeURIComponent(`business_date eq '${businessDate}'`);
             
@@ -553,7 +552,9 @@
                 try {
                     const rows = await pseFetch('his-wlk-cal', date);
                     if (rows && rows.length > 0) {
-                        return rows[rows.length - 1];
+                        // Zabezpieczenie: szukamy najświeższego pomiaru, który rzeczywiście ma wynik (omijamy puste, "przyszłe" kwadranse)
+                        const validRow = [...rows].reverse().find(r => r.zapotrzebowanie != null);
+                        if (validRow) return validRow;
                     }
                 } catch(e) {}
             }
@@ -629,17 +630,18 @@
                 return;
             }
             
-            const zapotrzebowanie = kse.zapotrzebowanie ?? kse.zap_kse ?? kse.zapotrzebowanie_mocy;
-            const generacja = kse.generacja ?? kse.gen_kse ?? kse.generacja_kse;
-            const saldo = kse.saldo ?? kse.saldo_wymiany ?? kse.krajowe_saldo;
+            // Dokładne klucze JSON zgodnie z dokumentacją PSE
+            const zapotrzebowanie = kse.zapotrzebowanie;
+            const generacja = kse.generacja;
+            const saldo = kse.swm_r ?? kse.saldo_wymiany ?? 0;
 
-            if (zapotrzebowanie !== undefined && zapotrzebowanie !== null) {
+            if (zapotrzebowanie != null) {
                 $('kse-demand').innerText = Math.round(Number(zapotrzebowanie)).toLocaleString('pl-PL') + ' MW';
             }
-            if (generacja !== undefined && generacja !== null) {
+            if (generacja != null) {
                 $('kse-generation').innerText = Math.round(Number(generacja)).toLocaleString('pl-PL') + ' MW';
             }
-            if (saldo !== undefined && saldo !== null) {
+            if (saldo != null) {
                 const s = Math.round(Number(saldo));
                 $('kse-balance').innerText = (s > 0 ? '+' : '') + s.toLocaleString('pl-PL') + ' MW';
                 $('kse-balance').style.color = s > 0 ? 'var(--accent-orange)' : 'var(--accent-blue)';
@@ -702,7 +704,8 @@
         const HOURLY_CELLS = 36;
 
         async function loadOpenMeteo() {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m&hourly=temperature_2m,precipitation,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,pressure_msl&models=icon_seamless,ecmwf_ifs025&timezone=${encodeURIComponent(TZ)}&forecast_days=2`;
+            // Usunięty wymuszony filtr modeli - Open-Meteo i tak dla Europy domyślnie składa optymalny wariant z DWD ICON
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m&hourly=temperature_2m,precipitation,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,pressure_msl&timezone=${encodeURIComponent(TZ)}&forecast_days=2`;
             return fetchJsonWithTimeout(url, 15000);
         }
 
@@ -882,7 +885,7 @@
                 renderHourly(h, c.time);
                 renderTempChart(h, c.time);
                 
-                $('om-status').innerHTML = '<span class="pulse"></span>Open-Meteo (ICON + ECMWF)';
+                $('om-status').innerHTML = '<span class="pulse"></span>Open-Meteo';
                 $('om-time').innerText = 'sprawdzono ' + nowStr();
             } catch (err) { 
                 console.error('Open-Meteo:', err);
