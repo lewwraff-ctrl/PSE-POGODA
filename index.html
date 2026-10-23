@@ -162,6 +162,9 @@
             .card { padding: 11px; }
             .value-huge { font-size: 4rem; }
         }
+            #pse-explorer-card pre { min-height: 90px; }
+        #pse-explorer-card select, #pse-explorer-card button { font: inherit; }
+        @media (max-width: 600px) { #pse-explorer-card { padding: 12px; } }
     </style>
 </head>
 <body>
@@ -282,6 +285,35 @@
                 </div>
             </div>
         </div>
+    </div>
+
+
+    <!-- EKSPERIMENTALNY EKSPLORATOR PUBLICZNEGO API PSE -->
+    <div class="charts-grid">
+      <div class="card" id="pse-explorer-card">
+        <h2>Eksplorator publicznych danych PSE <span style="font-size:.7rem;color:var(--text-muted);font-weight:400">tryb testowy</span></h2>
+        <p style="font-size:.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:12px">Sprawdź endpoint API bez dopisywania parametrów śledzących. Wynik pokaże dostępne pola i przykładowe rekordy. Nazwy endpointów są testowane osobno — brak wyniku nie oznacza, że PSE nie publikuje takich danych.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <select id="pse-endpoint" style="background:#0b1220;color:#f8fafc;border:1px solid #334155;border-radius:6px;padding:9px;min-width:220px;flex:1">
+            <option value="his-wlk-cal">his-wlk-cal — wielkości KSE (historyczne)</option>
+            <option value="kse-load">kse-load — zapotrzebowanie KSE</option>
+            <option value="price-cost">price-cost — ceny rozliczeniowe RB</option>
+            <option value="price-fcst">price-fcst — ceny prognozowane RB</option>
+            <option value="pl_wyk_kse">pl_wyk_kse — test starszej nazwy</option>
+            <option value="pl_pkd">pl_pkd — test planu PKD</option>
+          </select>
+          <button type="button" onclick="testPseEndpoint()">Testuj endpoint</button>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:.8rem;color:var(--text-muted)">
+          <label><input type="checkbox" id="pse-use-proxy" checked> Testuj przez proxy CORS, gdy bezpośredni dostęp nie działa</label>
+          <label>Rekordy: <select id="pse-top" style="background:#0b1220;color:#f8fafc;border:1px solid #334155;border-radius:5px;padding:4px"><option>5</option><option selected>10</option><option>20</option></select></label>
+        </div>
+        <div id="pse-explorer-status" style="font-size:.82rem;color:var(--text-muted);margin:6px 0 10px">Gotowy do testu. Źródło: api.raporty.pse.pl</div>
+        <div style="overflow:auto;max-height:360px;border:1px solid var(--border-color);border-radius:8px">
+          <pre id="pse-explorer-output" style="white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;font:12px/1.5 'JetBrains Mono',monospace;color:#cbd5e1;margin:0">Wybierz endpoint i kliknij „Testuj endpoint”.</pre>
+        </div>
+        <div class="status-bar"><span>Oficjalne API PSE v2</span><a href="https://api.raporty.pse.pl/api/" target="_blank" rel="noopener noreferrer" style="color:#60a5fa">Otwórz bazę API</a></div>
+      </div>
     </div>
 
     <!-- POGODA WYKRES DOLNY -->
@@ -901,6 +933,57 @@
             } finally {
                 weatherInFlight = false;
             }
+        }
+
+
+        // Narzędzie diagnostyczne: osobny test endpointu PSE, bez utm_source i innych tracking-parametrów.
+        async function testPseEndpoint() {
+            const endpoint = $('pse-endpoint').value;
+            const top = Number($('pse-top').value) || 10;
+            const useProxy = $('pse-use-proxy').checked;
+            const status = $('pse-explorer-status');
+            const output = $('pse-explorer-output');
+            const url = `${PSE_API}${encodeURIComponent(endpoint)}?$top=${top}`;
+            status.textContent = `Testuję ${endpoint}…`;
+            output.textContent = 'Łączenie…';
+            const attempts = [{label:'API bezpośrednio', url}];
+            if (useProxy) {
+                attempts.push({label:'corsproxy.io', url:'https://corsproxy.io/?' + encodeURIComponent(url)});
+                attempts.push({label:'AllOrigins', url:'https://api.allorigins.win/raw?url=' + encodeURIComponent(url)});
+            }
+            const errors = [];
+            for (const attempt of attempts) {
+                try {
+                    const data = await fetchJsonWithTimeout(attempt.url, 10000);
+                    const rows = Array.isArray(data.value) ? data.value : (Array.isArray(data) ? data : null);
+                    const summary = {
+                        wynik: 'SUKCES',
+                        metoda: attempt.label,
+                        endpoint,
+                        url_testowy: url,
+                        liczba_rekordow_w_odpowiedzi: rows ? rows.length : null,
+                        pola_pierwszego_rekordu: rows && rows[0] ? Object.keys(rows[0]) : [],
+                        przykladowe_rekordy: rows ? rows.slice(0, top) : data,
+                        nastepna_strona: data && data['@odata.nextLink'] ? data['@odata.nextLink'] : null
+                    };
+                    status.textContent = `Połączenie działa (${attempt.label}); endpoint: ${endpoint}; rekordów: ${rows ? rows.length : 'odpowiedź bez pola value'}.`;
+                    output.textContent = JSON.stringify(summary, null, 2);
+                    return;
+                } catch (e) {
+                    errors.push(`${attempt.label}: ${explain(e)}`);
+                }
+            }
+            status.textContent = `Nie udało się pobrać danych z ${endpoint}.`;
+            output.textContent = JSON.stringify({
+                wynik: 'BŁĄD', endpoint, url_testowy: url, błędy: errors,
+                możliwe_przyczyny: [
+                    'blokada sieci lub reguła bezpieczeństwa',
+                    'CORS albo niedostępność serwera proxy',
+                    'endpoint nie istnieje lub wymaga innych parametrów',
+                    'API zwróciło błąd HTTP'
+                ],
+                uwaga: 'Jeśli błąd dotyczy parametru utm_source, sprawdź czy adres nie został automatycznie zmieniony przez rozszerzenie przeglądarki lub przekierowanie. W tym narzędziu parametr ten nie jest dodawany.'
+            }, null, 2);
         }
 
         function refreshDashboard() { 
