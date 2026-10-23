@@ -162,9 +162,6 @@
             .card { padding: 11px; }
             .value-huge { font-size: 4rem; }
         }
-            #pse-explorer-card pre { min-height: 90px; }
-        #pse-explorer-card select, #pse-explorer-card button { font: inherit; }
-        @media (max-width: 600px) { #pse-explorer-card { padding: 12px; } }
     </style>
 </head>
 <body>
@@ -287,35 +284,6 @@
         </div>
     </div>
 
-
-    <!-- EKSPERIMENTALNY EKSPLORATOR PUBLICZNEGO API PSE -->
-    <div class="charts-grid">
-      <div class="card" id="pse-explorer-card">
-        <h2>Eksplorator publicznych danych PSE <span style="font-size:.7rem;color:var(--text-muted);font-weight:400">tryb testowy</span></h2>
-        <p style="font-size:.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:12px">Sprawdź endpoint API bez dopisywania parametrów śledzących. Wynik pokaże dostępne pola i przykładowe rekordy. Nazwy endpointów są testowane osobno — brak wyniku nie oznacza, że PSE nie publikuje takich danych.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-          <select id="pse-endpoint" style="background:#0b1220;color:#f8fafc;border:1px solid #334155;border-radius:6px;padding:9px;min-width:220px;flex:1">
-            <option value="his-wlk-cal">his-wlk-cal — wielkości KSE (historyczne)</option>
-            <option value="kse-load">kse-load — zapotrzebowanie KSE</option>
-            <option value="price-cost">price-cost — ceny rozliczeniowe RB</option>
-            <option value="price-fcst">price-fcst — ceny prognozowane RB</option>
-            <option value="pl_wyk_kse">pl_wyk_kse — test starszej nazwy</option>
-            <option value="pl_pkd">pl_pkd — test planu PKD</option>
-          </select>
-          <button type="button" onclick="testPseEndpoint()">Testuj endpoint</button>
-        </div>
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:.8rem;color:var(--text-muted)">
-          <label><input type="checkbox" id="pse-use-proxy" checked> Testuj przez proxy CORS, gdy bezpośredni dostęp nie działa</label>
-          <label>Rekordy: <select id="pse-top" style="background:#0b1220;color:#f8fafc;border:1px solid #334155;border-radius:5px;padding:4px"><option>5</option><option selected>10</option><option>20</option></select></label>
-        </div>
-        <div id="pse-explorer-status" style="font-size:.82rem;color:var(--text-muted);margin:6px 0 10px">Gotowy do testu. Źródło: api.raporty.pse.pl</div>
-        <div style="overflow:auto;max-height:360px;border:1px solid var(--border-color);border-radius:8px">
-          <pre id="pse-explorer-output" style="white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;font:12px/1.5 'JetBrains Mono',monospace;color:#cbd5e1;margin:0">Wybierz endpoint i kliknij „Testuj endpoint”.</pre>
-        </div>
-        <div class="status-bar"><span>Oficjalne API PSE v2</span><a href="https://api.raporty.pse.pl/api/" target="_blank" rel="noopener noreferrer" style="color:#60a5fa">Otwórz bazę API</a></div>
-      </div>
-    </div>
-
     <!-- POGODA WYKRES DOLNY -->
     <div class="charts-grid">
         <div class="card">
@@ -326,6 +294,8 @@
 
     <script>
         const PSE_API = 'https://api.raporty.pse.pl/api/';
+        // KSE: endpoint Cloudflare Worker; CORS musi dopuszczać origin GitHub Pages.
+        const KSE_WORKER_URL = 'https://pse-kse-proxy.lewwraff.workers.dev/';
         const LAT = 51.9528, LON = 15.4806;
         const TZ = 'Europe/Warsaw';
         const PSE_REFRESH_MS = 30 * 1000;
@@ -580,73 +550,58 @@
 
         async function refreshKseChart() {
             try {
-                const date = warsawDate();
-                
-                let kseRows = [];
-                for (const ep of ['pl_wyk_kse', 'wielkosci-podstawowe-kse', 'his-wlk-cal']) {
-                    kseRows = await pseFetchRobust(ep, date);
-                    if (kseRows.length > 0) break;
-                }
-                
-                let pkdRows = [];
-                if (kseRows.length > 0 && !kseRows[0].hasOwnProperty('przewidywane_zapotrzebowanie') && !kseRows[0].hasOwnProperty('zapotrzebowanie_przewidywane')) {
-                    for (const ep of ['pl_pkd', 'pkd', 'plan-kse']) {
-                        pkdRows = await pseFetchRobust(ep, date);
-                        if (pkdRows.length > 0) break;
-                    }
-                } else {
-                    pkdRows = kseRows; 
-                }
-
-                const actualMap = new Map();
-                const forecastMap = new Map();
-
-                kseRows.forEach(r => {
-                    const t = normTime(r.dtime ?? r.udtczas ?? r.godzina);
-                    const act = r.zapotrzebowanie_rzeczywiste ?? r.krajowe_zapotrzebowanie_na_moc ?? r.zapotrzebowanie ?? r.zapotrzebowanie_mocy;
-                    if (t && act != null) actualMap.set(t, Number(act));
+                // Worker udostępnia bieżący snapshot KSE z PV Index, nie serię historyczną.
+                const response = await fetch(KSE_WORKER_URL, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    cache: 'no-store',
+                    signal: AbortSignal.timeout(10000)
                 });
-
-                pkdRows.forEach(r => {
-                    const t = normTime(r.dtime ?? r.udtczas ?? r.godzina);
-                    const fcst = r.zapotrzebowanie_przewidywane ?? r.przewidywane_zapotrzebowanie ?? r.prognoza_zapotrzebowania ?? r.zapotrzebowanie; 
-                    if (t && fcst != null) forecastMap.set(t, Number(fcst));
-                });
-
-                let allKeys = new Set([...actualMap.keys(), ...forecastMap.keys()]);
-                let labels = Array.from(allKeys).sort();
-                
-                if (labels.length === 0) throw new Error("Puste zapytanie KSE");
-
-                const dataActual = labels.map(l => actualMap.get(l) || null);
-                const dataForecast = labels.map(l => forecastMap.get(l) || null);
-
-                let lastActualVal = null;
-                let currentForecastVal = null;
-                for (let i = dataActual.length - 1; i >= 0; i--) {
-                    if (dataActual[i] !== null) {
-                        lastActualVal = dataActual[i];
-                        currentForecastVal = dataForecast[i];
-                        break;
-                    }
+                if (!response.ok) throw new Error('KSE Worker HTTP ' + response.status);
+                const r = await response.json();
+                if (r.error || r.demand == null || r.generation == null) {
+                    throw new Error(r.error || 'Worker nie zwrócił pomiarów KSE');
                 }
-                
-                $('kse-val-actual').innerText = lastActualVal ? Math.round(lastActualVal).toLocaleString('pl-PL') + ' MW' : '-- MW';
-                $('kse-val-forecast').innerText = currentForecastVal ? Math.round(currentForecastVal).toLocaleString('pl-PL') + ' MW' : '-- MW';
+
+                const timestamp = r.timestamp || r.created_at || r.checkedAt || new Date().toISOString();
+                const label = new Date(timestamp).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+                const demand = Number(r.demand);
+                const generation = Number(r.generation);
+                if (!Number.isFinite(demand) || !Number.isFinite(generation)) throw new Error('Nieprawidłowe wartości KSE');
+
+                $('kse-val-actual').innerText = Math.round(demand).toLocaleString('pl-PL') + ' MW';
+                $('kse-val-forecast').innerText = Math.round(generation).toLocaleString('pl-PL') + ' MW';
+                // Zmień podpis pola drugiego wskaźnika: Worker nie udostępnia prognozy PKD.
+                const forecastEl = $('kse-val-forecast');
+                const forecastLabel = forecastEl?.parentElement?.querySelector('h3, .label, small');
+                if (forecastLabel) forecastLabel.textContent = 'Generacja';
 
                 if (kseChart) {
-                    kseChart.data.labels = labels;
-                    kseChart.data.datasets[0].data = dataActual;
-                    kseChart.data.datasets[1].data = dataForecast;
+                    const labels = kseChart.data.labels;
+                    if (!labels.includes(label) || labels[labels.length - 1] !== label) {
+                        kseChart.data.labels.push(label);
+                        kseChart.data.datasets[0].data.push(demand);
+                        kseChart.data.datasets[1].data.push(generation);
+                    } else {
+                        kseChart.data.datasets[0].data[kseChart.data.datasets[0].data.length - 1] = demand;
+                        kseChart.data.datasets[1].data[kseChart.data.datasets[1].data.length - 1] = generation;
+                    }
+                    // Ogranicz wykres do ostatnich 60 odczytów.
+                    while (kseChart.data.labels.length > 60) {
+                        kseChart.data.labels.shift();
+                        kseChart.data.datasets.forEach(ds => ds.data.shift());
+                    }
+                    kseChart.data.datasets[0].label = 'Zapotrzebowanie';
+                    kseChart.data.datasets[1].label = 'Generacja';
                     kseChart.update('none');
                 } else {
                     kseChart = new Chart($('kseChart').getContext('2d'), {
                         type: 'line',
                         data: {
-                            labels: labels,
+                            labels: [label],
                             datasets: [
-                                { label: 'Rzeczywiste zużycie', data: dataActual, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2.5, tension: 0.2, pointRadius: 0, fill: true, spanGaps: true },
-                                { label: 'Prognoza (PKD)', data: dataForecast, borderColor: '#3b82f6', borderDash: [5, 5], borderWidth: 2, tension: 0.2, pointRadius: 0, spanGaps: true }
+                                { label: 'Zapotrzebowanie', data: [demand], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2.5, tension: 0.2, pointRadius: 2, fill: true, spanGaps: true },
+                                { label: 'Generacja', data: [generation], borderColor: '#3b82f6', borderDash: [5, 5], borderWidth: 2, tension: 0.2, pointRadius: 2, spanGaps: true }
                             ]
                         },
                         options: {
@@ -660,17 +615,17 @@
                         }
                     });
                 }
-                
+
                 $('kse-pulse').classList.remove('err');
                 $('kse-status').classList.remove('err-text');
-                $('kse-status').innerText = 'System KSE Live';
+                $('kse-status').innerText = r.stale ? 'KSE — dane z kopii awaryjnej' : 'KSE Live (PV Index)';
                 $('kse-time').innerText = nowStr();
-                
             } catch(e) {
-                console.error("Błąd KSE:", e);
+                console.error('Błąd KSE Worker:', e);
                 $('kse-pulse').classList.add('err');
                 $('kse-status').classList.add('err-text');
-                $('kse-status').innerText = 'Oczekuję na dane API';
+                $('kse-status').innerText = 'Błąd połączenia z Workerem — sprawdź CORS/adres';
+                $('kse-status').title = 'Worker: ' + KSE_WORKER_URL + '. Dozwolony Origin w Workerze musi dokładnie odpowiadać adresowi GitHub Pages.';
             }
         }
 
@@ -933,57 +888,6 @@
             } finally {
                 weatherInFlight = false;
             }
-        }
-
-
-        // Narzędzie diagnostyczne: osobny test endpointu PSE, bez utm_source i innych tracking-parametrów.
-        async function testPseEndpoint() {
-            const endpoint = $('pse-endpoint').value;
-            const top = Number($('pse-top').value) || 10;
-            const useProxy = $('pse-use-proxy').checked;
-            const status = $('pse-explorer-status');
-            const output = $('pse-explorer-output');
-            const url = `${PSE_API}${encodeURIComponent(endpoint)}?$top=${top}`;
-            status.textContent = `Testuję ${endpoint}…`;
-            output.textContent = 'Łączenie…';
-            const attempts = [{label:'API bezpośrednio', url}];
-            if (useProxy) {
-                attempts.push({label:'corsproxy.io', url:'https://corsproxy.io/?' + encodeURIComponent(url)});
-                attempts.push({label:'AllOrigins', url:'https://api.allorigins.win/raw?url=' + encodeURIComponent(url)});
-            }
-            const errors = [];
-            for (const attempt of attempts) {
-                try {
-                    const data = await fetchJsonWithTimeout(attempt.url, 10000);
-                    const rows = Array.isArray(data.value) ? data.value : (Array.isArray(data) ? data : null);
-                    const summary = {
-                        wynik: 'SUKCES',
-                        metoda: attempt.label,
-                        endpoint,
-                        url_testowy: url,
-                        liczba_rekordow_w_odpowiedzi: rows ? rows.length : null,
-                        pola_pierwszego_rekordu: rows && rows[0] ? Object.keys(rows[0]) : [],
-                        przykladowe_rekordy: rows ? rows.slice(0, top) : data,
-                        nastepna_strona: data && data['@odata.nextLink'] ? data['@odata.nextLink'] : null
-                    };
-                    status.textContent = `Połączenie działa (${attempt.label}); endpoint: ${endpoint}; rekordów: ${rows ? rows.length : 'odpowiedź bez pola value'}.`;
-                    output.textContent = JSON.stringify(summary, null, 2);
-                    return;
-                } catch (e) {
-                    errors.push(`${attempt.label}: ${explain(e)}`);
-                }
-            }
-            status.textContent = `Nie udało się pobrać danych z ${endpoint}.`;
-            output.textContent = JSON.stringify({
-                wynik: 'BŁĄD', endpoint, url_testowy: url, błędy: errors,
-                możliwe_przyczyny: [
-                    'blokada sieci lub reguła bezpieczeństwa',
-                    'CORS albo niedostępność serwera proxy',
-                    'endpoint nie istnieje lub wymaga innych parametrów',
-                    'API zwróciło błąd HTTP'
-                ],
-                uwaga: 'Jeśli błąd dotyczy parametru utm_source, sprawdź czy adres nie został automatycznie zmieniony przez rozszerzenie przeglądarki lub przekierowanie. W tym narzędziu parametr ten nie jest dodawany.'
-            }, null, 2);
         }
 
         function refreshDashboard() { 
