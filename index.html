@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -19,6 +20,20 @@
             --text-muted: #94a3b8;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { background-image: radial-gradient(ellipse at top left, rgba(37,99,235,.10), transparent 38%), radial-gradient(ellipse at bottom right, rgba(16,185,129,.06), transparent 34%); }
+        button { transition: transform .15s ease, background .15s ease, box-shadow .15s ease; }
+        button:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(37,99,235,.2); }
+        header { box-shadow: 0 10px 28px rgba(0,0,0,.18); }
+        .card { border-radius: 16px; padding: 22px; box-shadow: 0 8px 26px rgba(0,0,0,.18); }
+        .grid { gap: 18px; align-items: stretch; }
+        .side-col > .card { height: fit-content; }
+        .card h2 { gap: 12px; line-height: 1.4; }
+        .weather-item { border: 1px solid rgba(148,163,184,.09); min-width: 0; }
+        .metrics-grid, .weather-grid { align-items: stretch; }
+        .status-bar { line-height: 1.5; }
+        @media (min-width: 1201px) { .grid { grid-template-columns: minmax(0, 2.15fr) minmax(340px, 1fr); } }
+        @media (max-width: 700px) { body { padding: 10px; } header { padding: 16px; align-items: flex-start; } h1 { font-size: 1.15rem; } .card { padding: 15px; } .value-huge { font-size: clamp(3.2rem, 15vw, 6rem); letter-spacing: -2px; } }
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
@@ -135,6 +150,16 @@
         .wx-alert.frost { background: rgba(59,130,246,0.15); border-color: #3b82f6; color: #93c5fd; }
         .wx-alert.wind { background: rgba(245,158,11,0.15); border-color: #f59e0b; color: #fcd34d; }
         #fs-weather-strip { display: none; }
+        .fs-weather-heading { font-size: clamp(12px, 1.1vw, 18px); color: var(--text-muted); text-transform: uppercase; letter-spacing: .12em; text-align: center; margin: 1.8vh 0 1vh; }
+        .fs-forecast { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 10px; width: 100%; }
+        .fs-forecast-item { text-align: center; padding: 1.1vh .5vw; border-radius: 12px; background: rgba(255,255,255,.045); border: 1px solid rgba(148,163,184,.13); min-width: 0; }
+        .fs-forecast-item .time { font-size: clamp(11px, 1vw, 16px); color: var(--text-muted); }
+        .fs-forecast-item .icon { font-size: clamp(20px, 2.2vw, 36px); margin: .4vh 0; }
+        .fs-forecast-item .temp { font: 800 clamp(16px, 1.8vw, 28px) 'JetBrains Mono', monospace; }
+        .fs-forecast-item .desc { font-size: clamp(9px, .75vw, 12px); color: var(--text-muted); margin-top: .3vh; }
+        #cen-card:fullscreen #fs-weather-strip, #cen-card:-webkit-full-screen #fs-weather-strip { display: block; width: 100%; max-width: 1300px; margin: 0 auto; }
+        #cen-card:fullscreen .fs-forecast-item, #cen-card:-webkit-full-screen .fs-forecast-item { background: rgba(255,255,255,.055); }
+        @media (max-width: 700px) { .fs-forecast { grid-template-columns: repeat(3, minmax(0,1fr)); } }
 
         /* ----- GIGANTYCZNY TRYB PEŁNOEKRANOWY (TYLKO DLA PANELU CEN) ----- */
         #cen-card:fullscreen, #cen-card:-webkit-full-screen { 
@@ -196,6 +221,10 @@
             <div style="text-align: center; margin-top: -5px; margin-bottom: 15px;">
                 <span id="cen-sub" class="sub-info">CEN [zł/MWh] - pobieranie...</span>
             </div>
+            <div id="fs-weather-strip" aria-live="polite">
+                <div class="fs-weather-heading">Nadchodząca pogoda · Zjednoczenia 103</div>
+                <div id="fs-forecast" class="fs-forecast"><div class="fs-forecast-item"><div class="time">Prognoza</div><div class="icon">⛅</div><div class="temp">--°</div><div class="desc">Pobieranie…</div></div></div>
+            </div>
 
             <div class="weather-grid" style="max-width: 600px; margin: 0 auto;">
                 <div class="weather-item" style="text-align: center;"><span>COR [zł/MWh]</span><strong id="cor-price" style="color: var(--accent-blue); font-size: 1.2rem;">--</strong></div>
@@ -248,6 +277,12 @@
 
                 <div style="position: relative; height: 160px; width: 100%; margin-top: 5px;">
                     <canvas id="kseChart"></canvas>
+                </div>
+
+                <div class="weather-item" style="margin-top:12px; border:1px solid var(--border-color);">
+                    <span>Saldo wymiany całkowitej</span>
+                    <strong id="kse-val-balance" style="display:block; margin-top:4px; font-size:1.35rem; color:var(--text-main);">-- MW</strong>
+                    <small id="kse-balance-direction" style="display:block; margin-top:3px; color:var(--text-muted);">Oczekiwanie na dane źródłowe</small>
                 </div>
                 
                 <div class="status-bar" style="margin-top: 15px;">
@@ -571,6 +606,26 @@
 
                 $('kse-val-actual').innerText = Math.round(demand).toLocaleString('pl-PL') + ' MW';
                 $('kse-val-forecast').innerText = Math.round(generation).toLocaleString('pl-PL') + ' MW';
+
+                // Saldo wymiany: użyj wyłącznie jawnego pola z odpowiedzi Workera.
+                // Nie wyliczamy go z różnicy generacji i zapotrzebowania, bo to nie jest saldo wymiany.
+                const balanceKeys = ['totalExchangeBalance', 'total_exchange_balance', 'exchangeBalance', 'exchange_balance', 'balance', 'saldo', 'saldo_wymiany', 'saldoWymiany', 'crossBorderBalance'];
+                let balanceRaw = null;
+                for (const key of balanceKeys) {
+                    if (r[key] !== undefined && r[key] !== null && r[key] !== '') { balanceRaw = r[key]; break; }
+                }
+                const balanceEl = $('kse-val-balance');
+                const balanceDirEl = $('kse-balance-direction');
+                if (balanceRaw !== null && Number.isFinite(Number(balanceRaw))) {
+                    const balance = Number(balanceRaw);
+                    balanceEl.innerText = (balance > 0 ? '+' : '') + Math.round(balance).toLocaleString('pl-PL') + ' MW';
+                    balanceEl.style.color = balance > 0 ? 'var(--accent-orange)' : (balance < 0 ? 'var(--accent-blue)' : 'var(--text-main)');
+                    balanceDirEl.innerText = r.balanceConvention || r.exchangeBalanceConvention || 'Wartość według konwencji źródła PV Index';
+                } else {
+                    balanceEl.innerText = 'Brak pola w źródle';
+                    balanceEl.style.color = 'var(--text-muted)';
+                    balanceDirEl.innerText = 'Worker musi udostępnić saldo wymiany całkowitej; nie zastępujemy go różnicą generacji i zapotrzebowania.';
+                }
                 // Zmień podpis pola drugiego wskaźnika: Worker nie udostępnia prognozy PKD.
                 const forecastEl = $('kse-val-forecast');
                 const forecastLabel = forecastEl?.parentElement?.querySelector('h3, .label, small');
@@ -743,9 +798,26 @@
             return fetchJsonWithTimeout(url, 15000);
         }
 
+        function renderFullscreenForecast(h, curTime) {
+            let start = h.time.findIndex(t => t.slice(0, 13) === String(curTime).slice(0, 13));
+            if (start < 0) start = 0;
+            const end = Math.min(start + 6, h.time.length);
+            let html = '';
+            for (let i = start; i < end; i++) {
+                const time = h.time[i].slice(11, 16);
+                const temp = Math.round(h.temperature_2m[i]);
+                const code = wmo(h.weather_code[i]);
+                const precip = Number(h.precipitation?.[i] || 0);
+                const desc = precip > 0 ? `Opad ${fmt(precip, 1)} mm` : code[0];
+                html += `<div class="fs-forecast-item"><div class="time">${i === start ? 'TERAZ' : time}</div><div class="icon">${code[1]}</div><div class="temp">${temp}°C</div><div class="desc">${desc}</div></div>`;
+            }
+            $('fs-forecast').innerHTML = html || '<div class="fs-forecast-item">Brak prognozy</div>';
+        }
+
         function renderHourly(h, curTime) {
             let start = h.time.findIndex(t => t.slice(0, 13) === String(curTime).slice(0, 13));
             if (start < 0) start = 0;
+            renderFullscreenForecast(h, curTime);
             const end = Math.min(start + HOURLY_CELLS, h.time.length);
             let html = '';
             for (let i = start; i < end; i++) {
