@@ -268,25 +268,27 @@
         </div>
 
         <div class="side-col">
-            <!-- KAFELEK KSE -->
+            <!-- WYKRES KSE Z CYFRAMI -->
             <div class="card">
-                <h2>System Elektroenergetyczny (KSE)</h2>
-                <div class="metrics-grid">
+                <h2>Wykres Zapotrzebowania KSE</h2>
+                
+                <div class="metrics-grid" style="margin-top: 5px; margin-bottom: 5px;">
                     <div class="weather-item">
-                        <span>Zapotrzebowanie KSE</span>
-                        <strong id="kse-demand" style="color: var(--accent-orange); font-size: 1.05rem;">-- MW</strong>
+                        <span>Bieżące (Rzeczywiste)</span>
+                        <strong id="kse-val-actual" style="color: var(--accent-orange); font-size: 1.05rem;">-- MW</strong>
                     </div>
                     <div class="weather-item">
-                        <span>Generacja KSE</span>
-                        <strong id="kse-generation" style="color: var(--accent-green); font-size: 1.05rem;">-- MW</strong>
-                    </div>
-                    <div class="weather-item" style="grid-column: span 2;">
-                        <span>Krajowe Saldo Wymiany (Eksport/Import)</span>
-                        <strong id="kse-balance" style="font-size: 1.05rem;">-- MW</strong>
+                        <span>Planowane (PKD)</span>
+                        <strong id="kse-val-forecast" style="color: var(--accent-blue); font-size: 1.05rem;">-- MW</strong>
                     </div>
                 </div>
-                <div class="status-bar">
-                    <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">PSE his-wlk-cal</span></span>
+
+                <div style="position: relative; height: 180px; width: 100%; margin-top: 5px;">
+                    <canvas id="kseChart"></canvas>
+                </div>
+                
+                <div class="status-bar" style="margin-top: 15px;">
+                    <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">PSE API</span></span>
                     <span id="kse-time">--</span>
                 </div>
             </div>
@@ -335,6 +337,8 @@
 
         let rbChart = null;
         let tempChart = null;
+        let kseChart = null;
+        
         let lastNotifiedPeriod = null; 
         let titleInterval = null;
         let soundMuted = localStorage.getItem('pse_sound_muted') === 'true';
@@ -547,22 +551,103 @@
             throw new Error('Brak danych RB (' + log.join('; ') + ')');
         }
 
-        async function loadKseSystemData() {
-            for (const date of [warsawDate(), warsawDate(-1)]) {
-                try {
-                    const rows = await pseFetch('his-wlk-cal', date);
-                    if (rows && rows.length > 0) {
-                        // Poprawka! Szukamy najświeższego pomiaru, którego wartość NIE JEST pusta (null)
-                        const validRow = [...rows].reverse().find(r => 
-                            r.zapotrzebowanie != null || 
-                            r.krajowe_zapotrzebowanie_na_moc != null || 
-                            r.zapotrzebowanie_mocy != null
-                        );
-                        if (validRow) return validRow;
+        async function refreshKseChart() {
+            try {
+                const date = warsawDate();
+                
+                let actuals = [];
+                for (const ep of ['zapotrzebowanie', 'wielkosci-podstawowe-kse', 'his-wlk-cal']) {
+                    try {
+                        const res = await pseFetch(ep, date);
+                        if (res && res.length > 0) { actuals = res; break; }
+                    } catch(e) {}
+                }
+                
+                let forecasts = [];
+                for (const ep of ['zapotrzebowanie-prog', 'pkd', 'plany-kse', 'plan-kse']) {
+                    try {
+                        const res = await pseFetch(ep, date);
+                        if (res && res.length > 0) { forecasts = res; break; }
+                    } catch(e) {}
+                }
+
+                const actualMap = new Map();
+                actuals.forEach(r => {
+                    const time = r.dtime || r.udtczas || r.period;
+                    const val = r.zapotrzebowanie ?? r.krajowe_zapotrzebowanie_na_moc ?? r.zapotrzebowanie_mocy;
+                    if (time && val != null) actualMap.set(String(time).slice(11, 16), Number(val));
+                });
+
+                const forecastMap = new Map();
+                forecasts.forEach(r => {
+                    const time = r.dtime || r.udtczas || r.period;
+                    const val = r.zapotrzebowanie ?? r.przewidywane_zapotrzebowanie ?? r.zapotrzebowanie_prog ?? r.krajowe_zapotrzebowanie_na_moc;
+                    if (time && val != null) forecastMap.set(String(time).slice(11, 16), Number(val));
+                });
+
+                let allKeys = new Set([...actualMap.keys(), ...forecastMap.keys()]);
+                let labels = Array.from(allKeys).sort();
+                
+                if (labels.length === 0) {
+                    throw new Error("Pusta odpowiedź z API");
+                }
+
+                const dataActual = labels.map(l => actualMap.get(l) || null);
+                const dataForecast = labels.map(l => forecastMap.get(l) || null);
+
+                // --- Aktualizacja cyfr (najnowsze wartości) ---
+                let lastActualVal = null;
+                let currentForecastVal = null;
+                for (let i = dataActual.length - 1; i >= 0; i--) {
+                    if (dataActual[i] !== null) {
+                        lastActualVal = dataActual[i];
+                        currentForecastVal = dataForecast[i];
+                        break;
                     }
-                } catch(e) {}
+                }
+                
+                $('kse-val-actual').innerText = lastActualVal ? Math.round(lastActualVal).toLocaleString('pl-PL') + ' MW' : '-- MW';
+                $('kse-val-forecast').innerText = currentForecastVal ? Math.round(currentForecastVal).toLocaleString('pl-PL') + ' MW' : '-- MW';
+                // ----------------------------------------------
+
+                if (kseChart) {
+                    kseChart.data.labels = labels;
+                    kseChart.data.datasets[0].data = dataActual;
+                    kseChart.data.datasets[1].data = dataForecast;
+                    kseChart.update('none');
+                } else {
+                    kseChart = new Chart($('kseChart').getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                { label: 'Rzeczywiste zużycie', data: dataActual, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2.5, tension: 0.2, pointRadius: 0, fill: true, spanGaps: true },
+                                { label: 'Prognoza na dziś (PKD)', data: dataForecast, borderColor: '#3b82f6', borderDash: [5, 5], borderWidth: 2, tension: 0.2, pointRadius: 0, spanGaps: true }
+                            ]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: { legend: { labels: { color: '#f8fafc', font: { size: 11 } } } },
+                            scales: {
+                                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', maxTicksLimit: 10 } },
+                                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+                            }
+                        }
+                    });
+                }
+                
+                $('kse-pulse').classList.remove('err');
+                $('kse-status').classList.remove('err-text');
+                $('kse-status').innerText = 'System KSE Live';
+                $('kse-time').innerText = nowStr();
+                
+            } catch(e) {
+                console.error("Błąd wczytywania wykresu KSE:", e);
+                $('kse-pulse').classList.add('err');
+                $('kse-status').classList.add('err-text');
+                $('kse-status').innerText = 'Brak danych wykresu KSE';
             }
-            return null;
         }
 
         function flashBrowserTitle(alertText) {
@@ -626,39 +711,6 @@
             $('cen-status').innerText = 'Portal PSE Live';
         }
 
-        function renderKseCard(kse) {
-            if (!kse) {
-                $('kse-pulse').classList.add('err');
-                $('kse-status').classList.add('err-text');
-                $('kse-status').innerText = 'Brak danych KSE';
-                return;
-            }
-            
-            const zapotrzebowanie = kse.zapotrzebowanie ?? kse.krajowe_zapotrzebowanie_na_moc ?? kse.zapotrzebowanie_mocy;
-            const generacja = kse.generacja ?? kse.sumaryczna_generacja_jw_i_njw ?? kse.generacja_kse;
-            const saldoRow = kse.krajowe_saldo_wymiany_miedzysystemowej_rownoleglej ?? 0;
-            const saldoNierow = kse.krajowe_saldo_wymiany_miedzysystemowej_nierownoleglej ?? 0;
-            const obokSaldo = (saldoRow !== 0 || saldoNierow !== 0) ? (saldoRow + saldoNierow) : null;
-            const saldo = obokSaldo ?? kse.swm_r ?? kse.krajowe_saldo ?? kse.saldo_wymiany ?? kse.saldo;
-
-            if (zapotrzebowanie != null) {
-                $('kse-demand').innerText = Math.round(Number(zapotrzebowanie)).toLocaleString('pl-PL') + ' MW';
-            }
-            if (generacja != null) {
-                $('kse-generation').innerText = Math.round(Number(generacja)).toLocaleString('pl-PL') + ' MW';
-            }
-            if (saldo != null) {
-                const s = Math.round(Number(saldo));
-                $('kse-balance').innerText = (s > 0 ? '+' : '') + s.toLocaleString('pl-PL') + ' MW';
-                $('kse-balance').style.color = s > 0 ? 'var(--accent-orange)' : 'var(--accent-blue)';
-            }
-
-            $('kse-pulse').classList.remove('err');
-            $('kse-status').classList.remove('err-text');
-            $('kse-status').innerText = 'PSE Live (his-wlk-cal)';
-            $('kse-time').innerText = nowStr();
-        }
-
         function renderRbError(err) {
             $('cen-pulse').classList.add('err');
             $('cen-status').classList.add('err-text');
@@ -694,8 +746,6 @@
                 const { series, date } = await loadRbPrices(); 
                 renderRbCard(series, date); 
                 renderRbChart(series); 
-                const kse = await loadKseSystemData();
-                renderKseCard(kse);
             } catch (err) { 
                 renderRbError(err); 
             }
@@ -900,10 +950,15 @@
             }
         }
 
-        function refreshDashboard() { refreshRb(); refreshWeather(); }
+        function refreshDashboard() { 
+            refreshRb(); 
+            refreshKseChart(); 
+            refreshWeather(); 
+        }
 
         refreshDashboard();
         setInterval(refreshRb, PSE_REFRESH_MS);
+        setInterval(refreshKseChart, PSE_REFRESH_MS);
         setInterval(refreshWeather, 10 * 60 * 1000);
     </script>
 </body>
