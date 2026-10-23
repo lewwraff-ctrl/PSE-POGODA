@@ -48,7 +48,6 @@
             .grid { grid-template-columns: 1fr; }
         }
         
-        /* BOCZNA KOLUMNA - BLOKADA ROZPYCHANIA (min-width: 0) */
         .side-col {
             display: flex;
             flex-direction: column;
@@ -76,7 +75,7 @@
         .card h2 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
         .card .status-bar { margin-top: auto; }
 
-        /* GIGANTYCZNA CENA GŁÓWNA */
+        /* CENA GŁÓWNA */
         .value-huge { font-family: 'JetBrains Mono', monospace; font-size: 7.5rem; font-weight: 800; text-align: center; margin: 15px 0; letter-spacing: -3px; white-space: nowrap; transition: color 0.3s; line-height: 1; }
         .sub-info { font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; }
         .period { display: block; margin: 0 auto 10px; width: max-content; padding: 8px 16px; border-radius: 6px; background: rgba(255,255,255,0.05); color: var(--text-main); font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 1.2rem; }
@@ -120,8 +119,6 @@
         .err-text { color: var(--accent-red); }
         .warn-text { color: var(--accent-orange); }
         
-        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
-        
         button { background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
         button:hover { background: #1d4ed8; }
         button.secondary { background: #334155; }
@@ -137,8 +134,28 @@
         .wx-alert.cold { background: rgba(147,51,234,0.15); border-color: #9333ea; color: #d8b4fe; }
         .wx-alert.frost { background: rgba(59,130,246,0.15); border-color: #3b82f6; color: #93c5fd; }
         .wx-alert.wind { background: rgba(245,158,11,0.15); border-color: #f59e0b; color: #fcd34d; }
-        .wx-alert.rain-warn { background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #93c5fd; }
         #fs-weather-strip { display: none; }
+
+        /* ----- GIGANTYCZNY TRYB PEŁNOEKRANOWY (TYLKO DLA PANELU CEN) ----- */
+        #cen-card:fullscreen, #cen-card:-webkit-full-screen { 
+            background: var(--bg-color); padding: 3vw; display: flex; flex-direction: column; 
+            justify-content: center; width: 100vw; height: 100vh; overflow: hidden; border: none !important;
+        }
+        #cen-card:fullscreen h2 button, #cen-card:-webkit-full-screen h2 button { display: none; }
+        #cen-card:fullscreen h2, #cen-card:-webkit-full-screen h2 { font-size: 1.5vw !important; margin-bottom: 2vh; }
+        #cen-card:fullscreen #cen-period, #cen-card:-webkit-full-screen #cen-period { font-size: 1.5vw !important; margin: 0 auto 2vh; padding: 1vh 2vw; }
+        #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: 18vw !important; text-align: center; margin: 0; line-height: 1; }
+        #cen-card:fullscreen .sub-info, #cen-card:-webkit-full-screen .sub-info { text-align: center; font-size: 1.5vw; margin-top: 1vh; margin-bottom: 3vh; }
+        
+        #cen-card:fullscreen .weather-grid, #cen-card:-webkit-full-screen .weather-grid { display: flex !important; justify-content: center; gap: 3vw; max-width: 100%; margin-bottom: 3vh; }
+        #cen-card:fullscreen .weather-item, #cen-card:-webkit-full-screen .weather-item { padding: 1vw 2vw; }
+        #cen-card:fullscreen .weather-item span, #cen-card:-webkit-full-screen .weather-item span { font-size: 1vw; }
+        #cen-card:fullscreen .weather-item strong, #cen-card:-webkit-full-screen .weather-item strong { font-size: 2vw; }
+        
+        #cen-card:fullscreen .rb-chart-box, #cen-card:-webkit-full-screen .rb-chart-box { flex-grow: 1; height: auto !important; min-height: 20vh; margin-top: 0; }
+        #cen-card:fullscreen .threshold-info, #cen-card:-webkit-full-screen .threshold-info { display: none !important; }
+        
+        #cen-card:fullscreen .status-bar, #cen-card:-webkit-full-screen .status-bar { font-size: 1vw; padding-top: 1vh; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1vh; }
 
         @media (max-width: 380px) {
             body { padding: 7px; }
@@ -152,7 +169,7 @@
     <header>
         <div>
             <h1>⚡ Ceny RB + KSE + Pogoda (Zjednoczenia 103)</h1>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny Rynku Bilansującego, parametry KSE oraz pogoda dla EC Zjednoczenia 103 | Klawisz F11 = Pełny Ekran</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny Rynku Bilansującego, parametry KSE oraz pogoda | Klawisz F11 = Pełny Ekran całej strony</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div style="text-align: right;">
@@ -169,7 +186,7 @@
         <div class="card" id="cen-card" style="border: 2px solid var(--border-color);">
             <h2>
                 <span>Ceny na Rynku Bilansującym (RB)</span>
-                <button class="secondary" onclick="toggleCenFullscreen()" style="padding: 6px 12px; font-size: 0.8rem;">📺 Pełny ekran paneli</button>
+                <button class="secondary" onclick="toggleCenFullscreen()" style="padding: 6px 12px; font-size: 0.8rem;">📺 Pełny ekran cen</button>
             </h2>
             
             <span id="cen-period" class="period">⏱ Okres: --:-- - --:--</span>
@@ -362,19 +379,26 @@
             mouseTimer = setTimeout(() => { document.body.style.cursor = 'none'; }, 3000);
         });
 
+        // POPRAWA KLAWISZA F11: Powiększa standardowo CAŁĄ STRONĘ
         document.addEventListener('keydown', (e) => {
             if (e.key === 'F11') {
                 e.preventDefault();
                 if (!document.fullscreenElement) {
                     document.documentElement.requestFullscreen().catch(err => {});
-                } else document.exitFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
             }
         });
 
+        // PRZYCISK: Powiększa TYLKO panel z ceną
         function toggleCenFullscreen() {
+            const panel = $('cen-card');
             if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {});
-            } else document.exitFullscreen();
+                panel.requestFullscreen().catch(err => alert(`Błąd: ${err.message}`));
+            } else {
+                document.exitFullscreen();
+            }
         }
 
         function updateSoundButton() {
@@ -443,7 +467,6 @@
         }
         function explain(err) { return (err && err.name === 'TypeError') ? 'brak dostępu do sieci' : (err && err.name === 'AbortError') ? 'przekroczono czas oczekiwania' : String(err && err.message || err); }
 
-        // --- Nowy, wielopoziomowy mechanizm pobierania z PSE z podwójnym proxy ---
         async function pseFetchRobust(endpoint, dateStr) {
             const dateFields = ['business_date', 'data', 'doba'];
             
@@ -455,7 +478,7 @@
 
                 async function tryFetchUrl(url) {
                     try { return await fetchJsonWithTimeout(url, 4000); } catch (e) {
-                        if (e.message && e.message.includes('HTTP 400')) throw e; // Pusty błąd, przejdź do kolejnego pola daty
+                        if (e.message && e.message.includes('HTTP 400')) throw e; 
                     }
                     try { return await fetchJsonWithTimeout('https://corsproxy.io/?' + encodeURIComponent(url), 10000); } catch (e) {
                         if (e.message && e.message.includes('HTTP 400')) throw e;
@@ -471,7 +494,7 @@
                     try {
                         json = await tryFetchUrl(nextTarget);
                     } catch (e) {
-                        if (e.message && e.message.includes('HTTP 400')) break; // Zły format zapytania, zmień pole daty
+                        if (e.message && e.message.includes('HTTP 400')) break; 
                     }
                     
                     if (json && json.value) {
@@ -854,16 +877,9 @@
                 }
 
                 let alertsHtml = '';
-                if (currentTemp < 0) {
-                    alertsHtml += `<div class="wx-alert frost">❄️ UWAGA MRÓZ: Temperatura poniżej zera (${currentTemp.toLocaleString('pl-PL')}°C)</div>`;
-                }
-
-                if (minTemp12h <= currentTemp - 5) {
-                    alertsHtml += `<div class="wx-alert cold">📉 OCHŁODZENIE: Prognozowany spadek do ${Math.round(minTemp12h)}°C w ciągu 12h</div>`;
-                }
-                if (currentGusts > 50) {
-                    alertsHtml += `<div class="wx-alert wind">💨 SILNY WIATR: Porywy do ${Math.round(currentGusts)} km/h</div>`;
-                }
+                if (currentTemp < 0) alertsHtml += `<div class="wx-alert frost">❄️ UWAGA MRÓZ: Temperatura poniżej zera (${currentTemp.toLocaleString('pl-PL')}°C)</div>`;
+                if (minTemp12h <= currentTemp - 5) alertsHtml += `<div class="wx-alert cold">📉 OCHŁODZENIE: Prognozowany spadek do ${Math.round(minTemp12h)}°C w ciągu 12h</div>`;
+                if (currentGusts > 50) alertsHtml += `<div class="wx-alert wind">💨 SILNY WIATR: Porywy do ${Math.round(currentGusts)} km/h</div>`;
                 
                 $('wx-alerts').innerHTML = alertsHtml;
 
