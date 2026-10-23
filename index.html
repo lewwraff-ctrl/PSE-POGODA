@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -280,7 +279,7 @@
                 </div>
 
                 <div class="weather-item" style="margin-top:12px; border:1px solid var(--border-color);">
-                    <span>Saldo wymiany całkowitej</span>
+                    <span>Saldo przepływów (6 połączeń)</span>
                     <strong id="kse-val-balance" style="display:block; margin-top:4px; font-size:1.35rem; color:var(--text-main);">-- MW</strong>
                     <small id="kse-balance-direction" style="display:block; margin-top:3px; color:var(--text-muted);">Oczekiwanie na dane źródłowe</small>
                 </div>
@@ -607,24 +606,21 @@
                 $('kse-val-actual').innerText = Math.round(demand).toLocaleString('pl-PL') + ' MW';
                 $('kse-val-forecast').innerText = Math.round(generation).toLocaleString('pl-PL') + ' MW';
 
-                // Saldo wymiany: użyj wyłącznie jawnego pola z odpowiedzi Workera.
-                // Nie wyliczamy go z różnicy generacji i zapotrzebowania, bo to nie jest saldo wymiany.
-                const balanceKeys = ['totalExchangeBalance', 'total_exchange_balance', 'exchangeBalance', 'exchange_balance', 'balance', 'saldo', 'saldo_wymiany', 'saldoWymiany', 'crossBorderBalance'];
-                let balanceRaw = null;
-                for (const key of balanceKeys) {
-                    if (r[key] !== undefined && r[key] !== null && r[key] !== '') { balanceRaw = r[key]; break; }
-                }
+                // Suma sześciu przepływów transgranicznych udostępnianych przez PV Index.
+                // To wskaźnik pochodny, a nie oficjalne saldo wymiany całkowitej.
+                const flowKeys = ['flow_se', 'flow_de', 'flow_cz', 'flow_sk', 'flow_ua', 'flow_lt'];
+                const flowValues = flowKeys.map(key => r[key] == null || r[key] === '' ? NaN : Number(r[key]));
                 const balanceEl = $('kse-val-balance');
                 const balanceDirEl = $('kse-balance-direction');
-                if (balanceRaw !== null && Number.isFinite(Number(balanceRaw))) {
-                    const balance = Number(balanceRaw);
+                if (flowValues.every(Number.isFinite)) {
+                    const balance = flowValues.reduce((sum, value) => sum + value, 0);
                     balanceEl.innerText = (balance > 0 ? '+' : '') + Math.round(balance).toLocaleString('pl-PL') + ' MW';
                     balanceEl.style.color = balance > 0 ? 'var(--accent-orange)' : (balance < 0 ? 'var(--accent-blue)' : 'var(--text-main)');
-                    balanceDirEl.innerText = r.balanceConvention || r.exchangeBalanceConvention || 'Wartość według konwencji źródła PV Index';
+                    balanceDirEl.innerText = 'Suma przepływów SE, DE, CZ, SK, UA i LT; nie jest to oficjalne saldo PSE.';
                 } else {
-                    balanceEl.innerText = 'Brak pola w źródle';
+                    balanceEl.innerText = 'Brak kompletu danych';
                     balanceEl.style.color = 'var(--text-muted)';
-                    balanceDirEl.innerText = 'Worker musi udostępnić saldo wymiany całkowitej; nie zastępujemy go różnicą generacji i zapotrzebowania.';
+                    balanceDirEl.innerText = 'PV Index nie zwrócił wszystkich 6 wartości przepływu.';
                 }
                 // Zmień podpis pola drugiego wskaźnika: Worker nie udostępnia prognozy PKD.
                 const forecastEl = $('kse-val-forecast');
