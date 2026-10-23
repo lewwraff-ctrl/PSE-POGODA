@@ -93,7 +93,6 @@
 
         .hourly-title { font-size: 0.72rem; color: var(--text-muted); margin: 10px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        /* WYMUSZONY GRUBY SUWAK DLA POGODY */
         .hourly { 
             display: flex; gap: 6px; overflow-x: scroll; padding-bottom: 12px; 
             scrollbar-width: auto; scrollbar-color: var(--accent-blue) rgba(255,255,255,0.1); 
@@ -553,11 +552,11 @@
                 try {
                     const rows = await pseFetch('his-wlk-cal', date);
                     if (rows && rows.length > 0) {
-                        // Poprawka! Zabezpieczenie aby szukać poprawnej nowej nazwy lub starej nazwy pola.
+                        // Poprawka! Szukamy najświeższego pomiaru, którego wartość NIE JEST pusta (null)
                         const validRow = [...rows].reverse().find(r => 
-                            r.krajowe_zapotrzebowanie_na_moc !== undefined || 
-                            r.zapotrzebowanie !== undefined || 
-                            r.zapotrzebowanie_mocy !== undefined
+                            r.zapotrzebowanie != null || 
+                            r.krajowe_zapotrzebowanie_na_moc != null || 
+                            r.zapotrzebowanie_mocy != null
                         );
                         if (validRow) return validRow;
                     }
@@ -635,14 +634,12 @@
                 return;
             }
             
-            // Poprawione klucze - skrypt na 100% znajdzie jedną z używanych w API opcji
-            const zapotrzebowanie = kse.krajowe_zapotrzebowanie_na_moc ?? kse.zapotrzebowanie ?? kse.zapotrzebowanie_mocy;
-            const generacja = kse.sumaryczna_generacja_jw_i_njw ?? kse.generacja ?? kse.generacja_kse;
-            
+            const zapotrzebowanie = kse.zapotrzebowanie ?? kse.krajowe_zapotrzebowanie_na_moc ?? kse.zapotrzebowanie_mocy;
+            const generacja = kse.generacja ?? kse.sumaryczna_generacja_jw_i_njw ?? kse.generacja_kse;
             const saldoRow = kse.krajowe_saldo_wymiany_miedzysystemowej_rownoleglej ?? 0;
             const saldoNierow = kse.krajowe_saldo_wymiany_miedzysystemowej_nierownoleglej ?? 0;
             const obokSaldo = (saldoRow !== 0 || saldoNierow !== 0) ? (saldoRow + saldoNierow) : null;
-            const saldo = obokSaldo ?? kse.krajowe_saldo ?? kse.saldo_wymiany ?? kse.saldo;
+            const saldo = obokSaldo ?? kse.swm_r ?? kse.krajowe_saldo ?? kse.saldo_wymiany ?? kse.saldo;
 
             if (zapotrzebowanie != null) {
                 $('kse-demand').innerText = Math.round(Number(zapotrzebowanie)).toLocaleString('pl-PL') + ' MW';
