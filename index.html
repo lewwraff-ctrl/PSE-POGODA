@@ -168,8 +168,8 @@
         #cen-card:fullscreen h2 button, #cen-card:-webkit-full-screen h2 button { display: none; }
         #cen-card:fullscreen h2, #cen-card:-webkit-full-screen h2 { font-size: 1.5vw !important; margin-bottom: 2vh; }
         #cen-card:fullscreen #cen-period, #cen-card:-webkit-full-screen #cen-period { font-size: 1.5vw !important; margin: 0 auto 2vh; padding: 1vh 2vw; }
-        #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: 18vw !important; text-align: center; margin: 0; line-height: 1; }
-        #cen-card:fullscreen .sub-info, #cen-card:-webkit-full-screen .sub-info { text-align: center; font-size: 1.5vw; margin-top: 1vh; margin-bottom: 3vh; }
+        #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: clamp(6rem, 14vw, 18rem) !important; letter-spacing: -0.035em; text-align: center; margin: 0 0 1.5vh; line-height: 1.08; flex-shrink: 0; }
+        #cen-card:fullscreen .sub-info, #cen-card:-webkit-full-screen .sub-info { text-align: center; font-size: 1.3vw; line-height: 1.35; margin-top: 1.5vh; margin-bottom: 3vh; position: relative; z-index: 1; }
         
         #cen-card:fullscreen .weather-grid, #cen-card:-webkit-full-screen .weather-grid { display: flex !important; justify-content: center; gap: 3vw; max-width: 100%; margin-bottom: 3vh; }
         #cen-card:fullscreen .weather-item, #cen-card:-webkit-full-screen .weather-item { padding: 1vw 2vw; }
@@ -258,29 +258,21 @@
 
         <!-- BOCZNA KOLUMNA: KSE I POGODA (DODATEK) -->
         <div class="side-col">
-            <!-- WYKRES KSE -->
             <div class="card">
-                <h2 style="display:none">Zapotrzebowanie KSE</h2>
-                
-                <div class="metrics-grid" style="display:none; margin-top: 5px; margin-bottom: 5px;">
+                <h2>Parametry KSE</h2>
+                <div class="metrics-grid" style="margin-top:0; margin-bottom:10px;">
                     <div class="weather-item">
-                        <span>Bieżące (Rzeczywiste)</span>
-                        <strong id="kse-val-actual" style="color: var(--accent-orange); font-size: 1.05rem;">-- MW</strong>
+                        <span>Zapotrzebowanie</span>
+                        <strong id="kse-val-demand" style="color:var(--accent-orange); font-size:1.05rem;">-- MW</strong>
                     </div>
                     <div class="weather-item">
-                        <span>Planowane (PKD)</span>
-                        <strong id="kse-val-forecast" style="color: var(--accent-blue); font-size: 1.05rem;">-- MW</strong>
+                        <span>Generacja</span>
+                        <strong id="kse-val-generation" style="color:var(--accent-blue); font-size:1.05rem;">-- MW</strong>
                     </div>
                 </div>
-
-                <div style="display:none; position: relative; height: 160px; width: 100%; margin-top: 5px;">
-                    <canvas id="kseChart"></canvas>
-                </div>
-
-                <div class="weather-item" style="margin-top:12px; border:1px solid var(--border-color);">
+                <div class="weather-item" style="border:1px solid var(--border-color);">
                     <span>Saldo przepływów</span>
                     <strong id="kse-val-balance" style="display:block; margin-top:4px; font-size:1.35rem; color:var(--text-main);">-- MW</strong>
-                    <small id="kse-balance-direction" style="display:none; margin-top:3px; color:var(--text-muted);">Oczekiwanie na dane źródłowe</small>
                 </div>
                 
                 <div class="status-bar" style="margin-top: 15px;">
@@ -335,7 +327,6 @@
 
         let rbChart = null;
         let tempChart = null;
-        let kseChart = null;
         
         let lastNotifiedPeriod = null; 
         let titleInterval = null;
@@ -343,7 +334,6 @@
         let lastDailyReloadKey = localStorage.getItem('pse_last_daily_reload_key') || null;
         let weatherInFlight = false;
         let lastTrackedPrice = null;
-        let latestWeatherData = null;
         let wakeLock = null;
 
         const $ = id => document.getElementById(id);
@@ -582,8 +572,13 @@
         }
 
         async function refreshKseChart() {
+            const status = $('kse-status');
+            const pulse = $('kse-pulse');
+            const balanceEl = $('kse-val-balance');
+            const demandEl = $('kse-val-demand');
+            const generationEl = $('kse-val-generation');
+
             try {
-                // Worker udostępnia bieżący snapshot KSE z PV Index, nie serię historyczną.
                 const response = await fetch(KSE_WORKER_URL, {
                     method: 'GET',
                     headers: { 'Accept': 'application/json' },
@@ -591,91 +586,51 @@
                     signal: AbortSignal.timeout(10000)
                 });
                 if (!response.ok) throw new Error('KSE Worker HTTP ' + response.status);
-                const r = await response.json();
-                if (r.error || r.demand == null || r.generation == null) {
-                    throw new Error(r.error || 'Worker nie zwrócił pomiarów KSE');
+
+                const data = await response.json();
+                if (data.error || data.demand == null || data.generation == null) {
+                    throw new Error(data.error || 'Worker nie zwrócił pomiarów KSE');
                 }
 
-                const timestamp = r.timestamp || r.created_at || r.checkedAt || new Date().toISOString();
-                const label = new Date(timestamp).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-                const demand = Number(r.demand);
-                const generation = Number(r.generation);
-                if (!Number.isFinite(demand) || !Number.isFinite(generation)) throw new Error('Nieprawidłowe wartości KSE');
+                demandEl.textContent = Math.round(Number(data.demand)).toLocaleString('pl-PL') + ' MW';
+                generationEl.textContent = Math.round(Number(data.generation)).toLocaleString('pl-PL') + ' MW';
 
-                $('kse-val-actual').innerText = Math.round(demand).toLocaleString('pl-PL') + ' MW';
-                $('kse-val-forecast').innerText = Math.round(generation).toLocaleString('pl-PL') + ' MW';
-
-                // Suma sześciu przepływów transgranicznych udostępnianych przez PV Index.
-                // To wskaźnik pochodny, a nie oficjalne saldo wymiany całkowitej.
+                // Sumujemy wyłącznie sześć dostępnych przepływów PV Index.
+                // To wskaźnik pochodny, a nie oficjalne saldo wymiany całkowitej PSE.
                 const flowKeys = ['flow_se', 'flow_de', 'flow_cz', 'flow_sk', 'flow_ua', 'flow_lt'];
-                const flowValues = flowKeys.map(key => r[key] == null || r[key] === '' ? NaN : Number(r[key]));
-                const balanceEl = $('kse-val-balance');
-                const balanceDirEl = $('kse-balance-direction');
+                const flowValues = flowKeys.map(key =>
+                    data[key] == null || data[key] === '' ? NaN : Number(data[key])
+                );
+
                 if (flowValues.every(Number.isFinite)) {
                     const balance = flowValues.reduce((sum, value) => sum + value, 0);
-                    balanceEl.innerText = (balance > 0 ? '+' : '') + Math.round(balance).toLocaleString('pl-PL') + ' MW';
-                    balanceEl.style.color = balance > 0 ? 'var(--accent-orange)' : (balance < 0 ? 'var(--accent-blue)' : 'var(--text-main)');
-                    balanceDirEl.innerText = 'Suma przepływów SE, DE, CZ, SK, UA i LT; nie jest to oficjalne saldo PSE.';
+                    balanceEl.textContent = (balance > 0 ? '+' : '') +
+                        Math.round(balance).toLocaleString('pl-PL') + ' MW';
+                    balanceEl.style.color = balance > 0
+                        ? 'var(--accent-orange)'
+                        : balance < 0 ? 'var(--accent-blue)' : 'var(--text-main)';
                 } else {
-                    balanceEl.innerText = 'Brak kompletu danych';
+                    balanceEl.textContent = 'Brak kompletu danych';
                     balanceEl.style.color = 'var(--text-muted)';
-                    balanceDirEl.innerText = 'PV Index nie zwrócił wszystkich 6 wartości przepływu.';
-                }
-                // Zmień podpis pola drugiego wskaźnika: Worker nie udostępnia prognozy PKD.
-                const forecastEl = $('kse-val-forecast');
-                const forecastLabel = forecastEl?.parentElement?.querySelector('h3, .label, small');
-                if (forecastLabel) forecastLabel.textContent = 'Generacja';
-
-                if (kseChart) {
-                    const labels = kseChart.data.labels;
-                    if (!labels.includes(label) || labels[labels.length - 1] !== label) {
-                        kseChart.data.labels.push(label);
-                        kseChart.data.datasets[0].data.push(demand);
-                        kseChart.data.datasets[1].data.push(generation);
-                    } else {
-                        kseChart.data.datasets[0].data[kseChart.data.datasets[0].data.length - 1] = demand;
-                        kseChart.data.datasets[1].data[kseChart.data.datasets[1].data.length - 1] = generation;
-                    }
-                    // Ogranicz wykres do ostatnich 60 odczytów.
-                    while (kseChart.data.labels.length > 60) {
-                        kseChart.data.labels.shift();
-                        kseChart.data.datasets.forEach(ds => ds.data.shift());
-                    }
-                    kseChart.data.datasets[0].label = 'Zapotrzebowanie';
-                    kseChart.data.datasets[1].label = 'Generacja';
-                    kseChart.update('none');
-                } else {
-                    kseChart = new Chart($('kseChart').getContext('2d'), {
-                        type: 'line',
-                        data: {
-                            labels: [label],
-                            datasets: [
-                                { label: 'Zapotrzebowanie', data: [demand], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderWidth: 2.5, tension: 0.2, pointRadius: 2, fill: true, spanGaps: true },
-                                { label: 'Generacja', data: [generation], borderColor: '#3b82f6', borderDash: [5, 5], borderWidth: 2, tension: 0.2, pointRadius: 2, spanGaps: true }
-                            ]
-                        },
-                        options: {
-                            responsive: true, maintainAspectRatio: false,
-                            interaction: { mode: 'index', intersect: false },
-                            plugins: { legend: { labels: { color: '#f8fafc', font: { size: 10 } } } },
-                            scales: {
-                                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', maxTicksLimit: 8 } },
-                                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
-                            }
-                        }
-                    });
                 }
 
-                $('kse-pulse').classList.remove('err');
-                $('kse-status').classList.remove('err-text');
-                $('kse-status').innerText = r.stale ? 'KSE — dane z kopii awaryjnej' : 'KSE Live (PV Index)';
-                $('kse-time').innerText = nowStr();
-            } catch(e) {
-                console.error('Błąd KSE Worker:', e);
-                $('kse-pulse').classList.add('err');
-                $('kse-status').classList.add('err-text');
-                $('kse-status').innerText = 'Błąd połączenia z Workerem — sprawdź CORS/adres';
-                $('kse-status').title = 'Worker: ' + KSE_WORKER_URL + '. Dozwolony Origin w Workerze musi dokładnie odpowiadać adresowi GitHub Pages.';
+                pulse.classList.remove('err', 'warn');
+                status.classList.remove('err-text', 'warn-text');
+                status.textContent = data.stale
+                    ? 'KSE — dane z kopii awaryjnej'
+                    : 'KSE Live (PV Index)';
+                $('kse-time').textContent = 'sprawdzono ' + nowStr();
+            } catch (error) {
+                console.error('Błąd KSE Worker:', error);
+                pulse.classList.add('err');
+                status.classList.add('err-text');
+                status.textContent = 'Błąd połączenia z Workerem';
+                status.title = 'Sprawdź dostęp do Workera i konfigurację CORS. Adres: ' + KSE_WORKER_URL;
+                balanceEl.textContent = 'Brak danych';
+                balanceEl.style.color = 'var(--text-muted)';
+                demandEl.textContent = 'Brak danych';
+                generationEl.textContent = 'Brak danych';
+                $('kse-time').textContent = '—';
             }
         }
 
@@ -918,7 +873,6 @@
             weatherInFlight = true;
             try {
                 const om = await loadOpenMeteo();
-                latestWeatherData = om;
                 const c = om.current, h = om.hourly;
                 const currentTemp = c.temperature_2m;
                 const currentGusts = c.wind_gusts_10m;
