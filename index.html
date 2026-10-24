@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ceny RB + KSE + Pogoda Zielona Góra</title>
+    <title>Ceny RB + SDAC + Pogoda (Zjednoczenia 103)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -19,20 +19,6 @@
             --text-muted: #94a3b8;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; }
-        body { background-image: radial-gradient(ellipse at top left, rgba(37,99,235,.10), transparent 38%), radial-gradient(ellipse at bottom right, rgba(16,185,129,.06), transparent 34%); }
-        button { transition: transform .15s ease, background .15s ease, box-shadow .15s ease; }
-        button:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(37,99,235,.2); }
-        header { box-shadow: 0 10px 28px rgba(0,0,0,.18); }
-        .card { border-radius: 16px; padding: 22px; box-shadow: 0 8px 26px rgba(0,0,0,.18); }
-        .grid { gap: 18px; align-items: stretch; }
-        .side-col > .card { height: fit-content; }
-        .card h2 { gap: 12px; line-height: 1.4; }
-        .weather-item { border: 1px solid rgba(148,163,184,.09); min-width: 0; }
-        .metrics-grid, .weather-grid { align-items: stretch; }
-        .status-bar { line-height: 1.5; }
-        @media (min-width: 1201px) { .grid { grid-template-columns: minmax(0, 2.15fr) minmax(340px, 1fr); } }
-        @media (max-width: 700px) { body { padding: 10px; } header { padding: 16px; align-items: flex-start; } h1 { font-size: 1.15rem; } .card { padding: 15px; } .value-huge { font-size: clamp(3.2rem, 15vw, 6rem); letter-spacing: -2px; } }
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
@@ -149,16 +135,6 @@
         .wx-alert.frost { background: rgba(59,130,246,0.15); border-color: #3b82f6; color: #93c5fd; }
         .wx-alert.wind { background: rgba(245,158,11,0.15); border-color: #f59e0b; color: #fcd34d; }
         #fs-weather-strip { display: none; }
-        .fs-weather-heading { font-size: clamp(12px, 1.1vw, 18px); color: var(--text-muted); text-transform: uppercase; letter-spacing: .12em; text-align: center; margin: 1.8vh 0 1vh; }
-        .fs-forecast { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 10px; width: 100%; }
-        .fs-forecast-item { text-align: center; padding: 1.1vh .5vw; border-radius: 12px; background: rgba(255,255,255,.045); border: 1px solid rgba(148,163,184,.13); min-width: 0; }
-        .fs-forecast-item .time { font-size: clamp(11px, 1vw, 16px); color: var(--text-muted); }
-        .fs-forecast-item .icon { font-size: clamp(20px, 2.2vw, 36px); margin: .4vh 0; }
-        .fs-forecast-item .temp { font: 800 clamp(16px, 1.8vw, 28px) 'JetBrains Mono', monospace; }
-        .fs-forecast-item .desc { font-size: clamp(9px, .75vw, 12px); color: var(--text-muted); margin-top: .3vh; }
-        #cen-card:fullscreen #fs-weather-strip, #cen-card:-webkit-full-screen #fs-weather-strip { display: block; width: 100%; max-width: 1300px; margin: 0 auto; }
-        #cen-card:fullscreen .fs-forecast-item, #cen-card:-webkit-full-screen .fs-forecast-item { background: rgba(255,255,255,.055); }
-        @media (max-width: 700px) { .fs-forecast { grid-template-columns: repeat(3, minmax(0,1fr)); } }
 
         /* ----- GIGANTYCZNY TRYB PEŁNOEKRANOWY (TYLKO DLA PANELU CEN) ----- */
         #cen-card:fullscreen, #cen-card:-webkit-full-screen { 
@@ -168,8 +144,8 @@
         #cen-card:fullscreen h2 button, #cen-card:-webkit-full-screen h2 button { display: none; }
         #cen-card:fullscreen h2, #cen-card:-webkit-full-screen h2 { font-size: 1.5vw !important; margin-bottom: 2vh; }
         #cen-card:fullscreen #cen-period, #cen-card:-webkit-full-screen #cen-period { font-size: 1.5vw !important; margin: 0 auto 2vh; padding: 1vh 2vw; }
-        #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: clamp(6rem, 14vw, 18rem) !important; letter-spacing: -0.035em; text-align: center; margin: 0 0 1.5vh; line-height: 1.08; flex-shrink: 0; }
-        #cen-card:fullscreen .sub-info, #cen-card:-webkit-full-screen .sub-info { text-align: center; font-size: 1.3vw; line-height: 1.35; margin-top: 1.5vh; margin-bottom: 3vh; position: relative; z-index: 1; }
+        #cen-card:fullscreen .value-huge, #cen-card:-webkit-full-screen .value-huge { font-size: 18vw !important; text-align: center; margin: 0; line-height: 1; }
+        #cen-card:fullscreen .sub-info, #cen-card:-webkit-full-screen .sub-info { text-align: center; font-size: 1.5vw; margin-top: 1vh; margin-bottom: 3vh; }
         
         #cen-card:fullscreen .weather-grid, #cen-card:-webkit-full-screen .weather-grid { display: flex !important; justify-content: center; gap: 3vw; max-width: 100%; margin-bottom: 3vh; }
         #cen-card:fullscreen .weather-item, #cen-card:-webkit-full-screen .weather-item { padding: 1vw 2vw; }
@@ -192,7 +168,8 @@
 
     <header>
         <div>
-            <h1>⚡ Ceny RB + KSE + Pogoda Zielona Góra</h1>
+            <h1>⚡ Ceny RB + SDAC + Pogoda (Zjednoczenia 103)</h1>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Ceny Rynku Bilansującego, ceny SDAC i pogoda | Klawisz F11 = Pełny Ekran całej strony</span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div style="text-align: right;">
@@ -208,7 +185,7 @@
         <!-- GŁÓWNY PANEL: CENA (DOMINUJĄCY) -->
         <div class="card" id="cen-card" style="border: 2px solid var(--border-color);">
             <h2>
-                <span>Ceny na rynku bilansującym PSE</span>
+                <span>Ceny na Rynku Bilansującym (RB)</span>
                 <button class="secondary" onclick="toggleCenFullscreen()" style="padding: 6px 12px; font-size: 0.8rem;">📺 Pełny ekran cen</button>
             </h2>
             
@@ -218,10 +195,6 @@
             
             <div style="text-align: center; margin-top: -5px; margin-bottom: 15px;">
                 <span id="cen-sub" class="sub-info">CEN [zł/MWh] - pobieranie...</span>
-            </div>
-            <div id="fs-weather-strip" aria-live="polite">
-                <div class="fs-weather-heading">Pogoda Zielona Góra · prognoza</div>
-                <div id="fs-forecast" class="fs-forecast"><div class="fs-forecast-item"><div class="time">Prognoza</div><div class="icon">⛅</div><div class="temp">--°</div><div class="desc">Pobieranie…</div></div></div>
             </div>
 
             <div class="weather-grid" style="max-width: 600px; margin: 0 auto;">
@@ -256,34 +229,23 @@
             </div>
         </div>
 
-        <!-- BOCZNA KOLUMNA: KSE I POGODA (DODATEK) -->
+        <!-- BOCZNA KOLUMNA: SDAC I POGODA (DODATEK) -->
         <div class="side-col">
+            <!-- CENY SDAC NA JUTRO -->
             <div class="card">
-                <h2>Parametry KSE</h2>
-                <div class="metrics-grid" style="margin-top:0; margin-bottom:10px;">
-                    <div class="weather-item">
-                        <span>Zapotrzebowanie</span>
-                        <strong id="kse-val-demand" style="color:var(--accent-orange); font-size:1.05rem;">-- MW</strong>
-                    </div>
-                    <div class="weather-item">
-                        <span>Generacja</span>
-                        <strong id="kse-val-generation" style="color:var(--accent-blue); font-size:1.05rem;">-- MW</strong>
-                    </div>
+                <h2>Ceny energii na jutro — SDAC (PL)</h2>
+                <div class="metrics-grid">
+                    <div class="weather-item"><span>Minimum [EUR/MWh]</span><strong id="sdac-min">—</strong></div>
+                    <div class="weather-item"><span>Maksimum [EUR/MWh]</span><strong id="sdac-max">—</strong></div>
+                    <div class="weather-item"><span>Średnia [EUR/MWh]</span><strong id="sdac-avg">—</strong></div>
                 </div>
-                <div class="weather-item" style="border:1px solid var(--border-color);">
-                    <span>Saldo przepływów</span>
-                    <strong id="kse-val-balance" style="display:block; margin-top:4px; font-size:1.35rem; color:var(--text-main);">-- MW</strong>
-                </div>
-                
-                <div class="status-bar" style="margin-top: 15px;">
-                    <span><span id="kse-pulse" class="pulse"></span><span id="kse-status">Pobieranie...</span></span>
-                    <span id="kse-time">--</span>
-                </div>
+                <div class="chart-container" style="margin-top:15px"><canvas id="sdacChart"></canvas></div>
+                <div class="status-bar"><span><span id="sdac-pulse" class="pulse"></span><span id="sdac-status">Pobieranie cen…</span></span><span id="sdac-time">—</span></div>
             </div>
 
             <!-- POGODA -->
             <div class="card" style="flex-grow: 1;">
-                <h2>Pogoda Zielona Góra</h2>
+                <h2>Pogoda Zjednoczenia 103</h2>
                 <div class="wx-top">
                     <div id="weather-temp" class="value-huge-wx">--°C</div>
                     <div id="weather-desc" style="font-size: 0.75rem; color: var(--text-muted);">Pobieranie...</div>
@@ -312,16 +274,14 @@
     <!-- POGODA WYKRES DOLNY -->
     <div class="charts-grid">
         <div class="card">
-            <h2>Pogoda Zielona Góra — temperatura godzinowa i opady</h2>
+            <h2>Temperatura godzinowa i opady - Zjednoczenia 103</h2>
             <div class="chart-container"><canvas id="tempChart"></canvas></div>
         </div>
     </div>
 
     <script>
         const PSE_API = 'https://api.raporty.pse.pl/api/';
-        // KSE: endpoint Cloudflare Worker; CORS musi dopuszczać origin GitHub Pages.
-        const KSE_WORKER_URL = 'https://pse-kse-proxy.lewwraff.workers.dev/';
-        const LAT = 51.9519, LON = 15.4893;
+        const LAT = 51.9528, LON = 15.4806;
         const TZ = 'Europe/Warsaw';
         const PSE_REFRESH_MS = 30 * 1000;
 
@@ -334,6 +294,7 @@
         let lastDailyReloadKey = localStorage.getItem('pse_last_daily_reload_key') || null;
         let weatherInFlight = false;
         let lastTrackedPrice = null;
+        let latestWeatherData = null;
         let wakeLock = null;
 
         const $ = id => document.getElementById(id);
@@ -571,68 +532,6 @@
             throw new Error('Brak danych RB (' + log.join('; ') + ')');
         }
 
-        async function refreshKseChart() {
-            const status = $('kse-status');
-            const pulse = $('kse-pulse');
-            const balanceEl = $('kse-val-balance');
-            const demandEl = $('kse-val-demand');
-            const generationEl = $('kse-val-generation');
-
-            try {
-                const response = await fetch(KSE_WORKER_URL, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' },
-                    cache: 'no-store',
-                    signal: AbortSignal.timeout(10000)
-                });
-                if (!response.ok) throw new Error('KSE Worker HTTP ' + response.status);
-
-                const data = await response.json();
-                if (data.error || data.demand == null || data.generation == null) {
-                    throw new Error(data.error || 'Worker nie zwrócił pomiarów KSE');
-                }
-
-                demandEl.textContent = Math.round(Number(data.demand)).toLocaleString('pl-PL') + ' MW';
-                generationEl.textContent = Math.round(Number(data.generation)).toLocaleString('pl-PL') + ' MW';
-
-                // Sumujemy wyłącznie sześć dostępnych przepływów PV Index.
-                // To wskaźnik pochodny, a nie oficjalne saldo wymiany całkowitej PSE.
-                const flowKeys = ['flow_se', 'flow_de', 'flow_cz', 'flow_sk', 'flow_ua', 'flow_lt'];
-                const flowValues = flowKeys.map(key =>
-                    data[key] == null || data[key] === '' ? NaN : Number(data[key])
-                );
-
-                if (flowValues.every(Number.isFinite)) {
-                    const balance = flowValues.reduce((sum, value) => sum + value, 0);
-                    balanceEl.textContent = (balance > 0 ? '+' : '') +
-                        Math.round(balance).toLocaleString('pl-PL') + ' MW';
-                    balanceEl.style.color = balance > 0
-                        ? 'var(--accent-orange)'
-                        : balance < 0 ? 'var(--accent-blue)' : 'var(--text-main)';
-                } else {
-                    balanceEl.textContent = 'Brak kompletu danych';
-                    balanceEl.style.color = 'var(--text-muted)';
-                }
-
-                pulse.classList.remove('err', 'warn');
-                status.classList.remove('err-text', 'warn-text');
-                status.textContent = data.stale
-                    ? 'KSE — dane z kopii awaryjnej'
-                    : 'KSE Live (PV Index)';
-                $('kse-time').textContent = 'sprawdzono ' + nowStr();
-            } catch (error) {
-                console.error('Błąd KSE Worker:', error);
-                pulse.classList.add('err');
-                status.classList.add('err-text');
-                status.textContent = 'Błąd połączenia z Workerem';
-                status.title = 'Sprawdź dostęp do Workera i konfigurację CORS. Adres: ' + KSE_WORKER_URL;
-                balanceEl.textContent = 'Brak danych';
-                balanceEl.style.color = 'var(--text-muted)';
-                demandEl.textContent = 'Brak danych';
-                generationEl.textContent = 'Brak danych';
-                $('kse-time').textContent = '—';
-            }
-        }
 
         function flashBrowserTitle(alertText) {
             if (titleInterval) clearInterval(titleInterval);
@@ -686,7 +585,7 @@
             const currentPeriodStr = periodLabel(last.dtime);
             $('cen-period').innerText = `⏱ Okres: ${currentPeriodStr} (15 min)`;
             $('cen-sub').innerText = `CEN [zł/MWh] - doba ${date}`;
-            $('cen-update-time').innerText = (last.pub ? 'Publ. ' + String(last.pub).replace('T', ' ').slice(11, 16) + ' · ' : '') + 'sprawdzono ' + nowStr();
+            $('cen-update-time').innerText = (last.pub ? 'Publ. ' + String(last.pub).replace('T', ' ').slice(11, 16) + ' · ' : '') + 'aktualizacja: ' + nowStr();
             
             if (last.cen !== null) checkThresholdsAndAlert(last.cen, currentPeriodStr);
 
@@ -744,37 +643,21 @@
         const HOURLY_CELLS = 36;
 
         async function loadOpenMeteo() {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m&hourly=temperature_2m,precipitation,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,pressure_msl&timezone=${encodeURIComponent(TZ)}&forecast_days=2`;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m&hourly=temperature_2m,precipitation_probability,precipitation,snowfall,weather_code,wind_speed_10m,wind_gusts_10m,pressure_msl&timezone=${encodeURIComponent(TZ)}&forecast_days=2`;
             return fetchJsonWithTimeout(url, 15000);
-        }
-
-        function renderFullscreenForecast(h, curTime) {
-            let start = h.time.findIndex(t => t.slice(0, 13) === String(curTime).slice(0, 13));
-            if (start < 0) start = 0;
-            const end = Math.min(start + 6, h.time.length);
-            let html = '';
-            for (let i = start; i < end; i++) {
-                const time = h.time[i].slice(11, 16);
-                const temp = Math.round(h.temperature_2m[i]);
-                const code = wmo(h.weather_code[i]);
-                const precip = Number(h.precipitation?.[i] || 0);
-                const desc = precip > 0 ? `Opad ${fmt(precip, 1)} mm` : code[0];
-                html += `<div class="fs-forecast-item"><div class="time">${i === start ? 'TERAZ' : time}</div><div class="icon">${code[1]}</div><div class="temp">${temp}°C</div><div class="desc">${desc}</div></div>`;
-            }
-            $('fs-forecast').innerHTML = html || '<div class="fs-forecast-item">Brak prognozy</div>';
         }
 
         function renderHourly(h, curTime) {
             let start = h.time.findIndex(t => t.slice(0, 13) === String(curTime).slice(0, 13));
             if (start < 0) start = 0;
-            renderFullscreenForecast(h, curTime);
             const end = Math.min(start + HOURLY_CELLS, h.time.length);
             let html = '';
             for (let i = start; i < end; i++) {
                 const snow = h.snowfall[i] || 0, prec = h.precipitation[i] || 0;
-                let p = '—', pc = 'p';
-                if (snow > 0) { p = `❄${fmt(snow, 1)}`; pc = 'p snow'; }
-                else if (prec > 0) { p = `🌧${fmt(prec, 1)}`; }
+                const probability = h.precipitation_probability?.[i];
+                let p = probability == null ? '—' : `💧${probability}%`, pc = 'p';
+                if (snow > 0) { p = `❄${fmt(snow, 1)} mm · ${probability ?? '—'}%`; pc = 'p snow'; }
+                else if (prec > 0) { p = `🌧${fmt(prec, 1)} mm · ${probability ?? '—'}%`; }
                 const g = Math.round(h.wind_gusts_10m[i]);
                 const wc = g >= 60 ? 'w high' : g >= 40 ? 'w mid' : 'w';
                 
@@ -873,6 +756,7 @@
             weatherInFlight = true;
             try {
                 const om = await loadOpenMeteo();
+                latestWeatherData = om;
                 const c = om.current, h = om.hourly;
                 const currentTemp = c.temperature_2m;
                 const currentGusts = c.wind_gusts_10m;
@@ -902,7 +786,7 @@
                 renderTempChart(h, c.time);
                 
                 $('om-status').innerHTML = '<span class="pulse"></span>Open-Meteo';
-                $('om-time').innerText = 'sprawdzono ' + nowStr();
+                $('om-time').innerText = 'aktualizacja: ' + nowStr();
             } catch (err) { 
                 console.error('Open-Meteo:', err);
                 $('om-status').innerHTML = '<span class="pulse err"></span>Brak danych pogodowych';
@@ -911,15 +795,44 @@
             }
         }
 
+        let sdacChart = null;
+        async function refreshSdac() {
+            const status = $('sdac-status'), pulse = $('sdac-pulse');
+            try {
+                status.textContent = 'Pobieranie cen…';
+                pulse.classList.remove('err', 'warn');
+                // Daty w strefie lokalnej przeglądarki; dashboard jest przeznaczony dla Polski.
+                const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+                const dayAfter = new Date(tomorrow); dayAfter.setDate(dayAfter.getDate() + 1);
+                const dateStr = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                const url = `https://api.energy-charts.info/price?bzn=PL&start=${dateStr(tomorrow)}&end=${dateStr(dayAfter)}`;
+                const data = await fetchJsonWithTimeout(url, 15000);
+                const prices = (data.price || []).map(v => v == null ? null : Number(v));
+                const valid = prices.filter(Number.isFinite);
+                if (!valid.length) throw new Error('Ceny na jutro nie są jeszcze opublikowane');
+                const avg = valid.reduce((a,b)=>a+b,0)/valid.length;
+                $('sdac-min').textContent = fmt(Math.min(...valid));
+                $('sdac-max').textContent = fmt(Math.max(...valid));
+                $('sdac-avg').textContent = fmt(avg);
+                const times = data.unix_seconds || [];
+                const labels = prices.map((_,i) => times[i] ? new Date(times[i]*1000).toLocaleTimeString('pl-PL',{timeZone:TZ,hour:'2-digit',minute:'2-digit'}) : String(i));
+                if (sdacChart) sdacChart.destroy();
+                sdacChart = new Chart($('sdacChart').getContext('2d'), {type:'line',data:{labels,datasets:[{label:'SDAC [EUR/MWh]',data:prices,borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,.12)',borderWidth:2,pointRadius:1,tension:.2,fill:true,spanGaps:false}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#f8fafc'}}},scales:{x:{ticks:{color:'#94a3b8',maxTicksLimit:10},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,.05)'}}}}});
+                status.textContent = 'Ceny SDAC pobrane'; $('sdac-time').textContent = 'Sprawdzono ' + nowStr();
+            } catch (err) {
+                console.error('SDAC:',err); status.textContent = 'Brak cen na jutro'; pulse.classList.add('err'); $('sdac-time').textContent = explain(err);
+            }
+        }
+
         function refreshDashboard() { 
             refreshRb(); 
-            refreshKseChart(); 
+            refreshSdac();
             refreshWeather(); 
         }
 
         refreshDashboard();
         setInterval(refreshRb, PSE_REFRESH_MS);
-        setInterval(refreshKseChart, PSE_REFRESH_MS);
+        setInterval(refreshSdac, 15 * 60 * 1000);
         setInterval(refreshWeather, 10 * 60 * 1000);
     </script>
 </body>
